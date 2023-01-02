@@ -2,6 +2,14 @@
 
 * JDK版本：**jdk 8u65**
 
+* ```xml
+  <dependency>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
+      <version>3.2.1</version>
+  </dependency>
+  ```
+
 源码里面都是`.class`文件，反编译的代码不好阅读，需下载`.java`源码，<a href="http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/rev/af660750b2f4">点击zip下载</a>
 解压jdk8u65的src.zip，将下载后的源码（src\share\classes）的sun文件夹拷贝到解压后的src文件夹
 
