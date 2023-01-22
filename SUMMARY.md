@@ -4,6 +4,7 @@
 
 * [反射](Foundation/reflection.md)
 * [代理模式](Foundation/proxy.md)
+* [SPI](Foundation/SPI.md)
 * [动态加载字节码](/Foundation/ClassLoader.md)
 * [URLDNS](Foundation/URLDNS.md)
 * [RMI](Foundation/RMI.md)
@@ -16,6 +17,7 @@
 * [CC6](/Deserial/CC6.md)
 * [CC3](/Deserial/CC3.md)
 * [CC2](/Deserial/CC2.md)
+* [SnakeYaml](/Deserial/SnakeYaml.md)
 
 ## 🐎Memory Shell
 

