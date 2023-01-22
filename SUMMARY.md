@@ -5,7 +5,9 @@
 * [反射](Foundation/reflection.md)
 * [代理模式](Foundation/proxy.md)
 * [动态加载字节码](/Foundation/ClassLoader.md)
-* [反序列化初探【URLDNS】](Foundation/URLDNS.md)
+* [URLDNS](Foundation/URLDNS.md)
+* [RMI](Foundation/RMI.md)
+* [JNDI](Foundation/JNDI.md)
 
 ## 👻Deserialize
 
