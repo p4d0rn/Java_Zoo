@@ -163,3 +163,15 @@ public class Test {
 * fastjson 在反序列化时，如果 Field 类型为 `byte[]`，将会调用`com.alibaba.fastjson.parser.JSONScanner#bytesValue` 进行 base64 解码，对应的，在序列化时也会进行 base64 编码。
 * fastjson 在为类属性寻找 get/set 方法时，调用函数 `com.alibaba.fastjson.parser.deserializer.JavaBeanDeserializer#smartMatch()` 方法，会忽略 `_|-` 字符串，假如字段名叫 `_a_g_e_`，getter 方法为 `getAge()`，fastjson 也可以找得到。
 
+配置类：
+
+`com.alibaba.fastjson.parser.ParserConfig`：后面的AutoType开关和黑名单体现在这个类中
+
+
+
+
+
+
+
+
+
