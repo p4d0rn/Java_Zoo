@@ -186,8 +186,10 @@ JNDI中对象的传递有两种：
 **防御**
 
 - JDK 6u45、7u21之后：java.rmi.server.useCodebaseOnly 默认值被设置为 true。将禁用自动加载远程类文件，仅从CLASSPATH和当前JVM的java.rmi.server.codebase指定路径加载类文件。使用这个属性来防止客户端JVM从其他Codebase地址上动态加载类，增加了RMI ClassLoader的安全性。
-- JDK 6u141、7u131、8u121之后：增加了 com.sun.jndi.rmi.object.trustURLCodebase 选项，默认为 false，禁止RMI和CORBA协议使用远程codebase的选项，因此RMI和CORBA在以上的JDK版本上已经无法触发该漏洞，但依然可以通过指定URI为LDAP协议来进行JNDI注入攻击。
+- JDK 6u132、7u122、8u113之后：增加了 com.sun.jndi.rmi.object.trustURLCodebase 选项，默认为 false，禁止RMI和CORBA协议使用远程codebase的选项，因此RMI和CORBA在以上的JDK版本上已经无法触发该漏洞，但依然可以通过指定URI为LDAP协议来进行JNDI注入攻击。
 - JDK 6u211、7u201、8u191之后：增加了 com.sun.jndi.ldap.object.trustURLCodebase 选项，默认为 false，禁止LDAP协议使用远程codebase的选项，把LDAP协议的攻击途径也给禁了。
+
+![image-20230124155501526](../.gitbook/assets/image-20230124155501526.png)
 
 ## JNDI-RMI
 
@@ -291,7 +293,7 @@ public class calc {
 
 **Patch**
 
-JDK 6u141、7u131、8u121之后：增加了 com.sun.jndi.rmi.object.trustURLCodebase 选项，默认为 false，禁止RMI和CORBA协议使用远程codebase的选项，因此RMI和CORBA在以上的JDK版本上已经无法触发该漏洞。
+JDK 6u132、7u122、8u113之后：增加了 com.sun.jndi.rmi.object.trustURLCodebase 选项，默认为 false，禁止RMI和CORBA协议使用远程codebase的选项，因此RMI和CORBA在以上的JDK版本上已经无法触发该漏洞。
 
 在RegistryContext中，会判断 trustURLCodebase，默认为false
 

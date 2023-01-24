@@ -178,6 +178,14 @@ public static <S> ServiceLoader<S> load(Class<S> service) {
 
 懒迭代器，顾名思义，需要用的时候才迭代
 
+hasNext => hasNextService
+
+![image-20230123122535820](../.gitbook/assets/image-20230123122535820.png)
+
+`ServiceLoader<S>`类有常量属性`PREFIX = "META-INF/services/"`
+
+`service.getName()`获取接口全类名，拼接得到SPI文件名，读取得到实现类的类名
+
 调用其next方法 => nextService方法
 
 ```java

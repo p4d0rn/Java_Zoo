@@ -32,6 +32,16 @@ public Object transform(Object input) {
 
 # 0x02 Weave POC
 
+使用javassist来获取字节码
+
+```xml
+<dependency>
+    <groupId>org.javassist</groupId>
+    <artifactId>javassist</artifactId>
+    <version>3.29.2-GA</version>
+</dependency>
+```
+
 ```java
 import com.sun.org.apache.xalan.internal.xsltc.DOM;
 import com.sun.org.apache.xalan.internal.xsltc.TransletException;
