@@ -112,7 +112,7 @@ POC中触发invoke的是`AnnotationInvocationHandler#readObject` =>`memberValues
 
 因此`Proxy.newProxyInstance`传的是`Map`的`ClassLoader`和接口
 
-# 0x04 ShortCut
+# 0x04 Shortcomings
 
 `LazyMap`的漏洞触发在get和invoke中
 而`TransformedMap`的漏洞触发在setValue中

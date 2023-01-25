@@ -257,7 +257,7 @@ Object o = (Object) ois.readObject();
 ois.close();
 ```
 
-# 0x05 CC1 Shortcut
+# 0x05 CC1 Shortcomings
 
 `sun.reflect.annotation.AnnotationInvocationHandler`作为CC1链的入口类，
 在Java 8u71之后被修改了
