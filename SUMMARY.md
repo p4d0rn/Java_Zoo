@@ -6,9 +6,11 @@
 * [代理模式](Foundation/proxy.md)
 * [SPI](Foundation/SPI.md)
 * [动态加载字节码](/Foundation/ClassLoader.md)
+* [BCEL](/Foundation/BCEL.md)
 * [URLDNS](Foundation/URLDNS.md)
 * [RMI](Foundation/RMI.md)
 * [JNDI](Foundation/JNDI.md)
+* [Tomcat架构](Foundation/tomcat.md)
 
 ## 👻Deserialize
 * Commons Collections
@@ -27,7 +29,9 @@
   * [FastJson-ByPass](/Deserial/FastJson_ByPass.md)
 
 * Others
+  * [C3P0](/Deserial/C3P0.md)
   * [SnakeYaml](/Deserial/SnakeYaml.md)
+  
 
 
 ## 🐎Memory Shell

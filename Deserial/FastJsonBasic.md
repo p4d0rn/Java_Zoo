@@ -153,7 +153,7 @@ public class Test {
 * parse()会**识别**并调用目标类的setter方法
 * parseObject()会触发目标类的getter和setter方法
 
-因此若能找到一个类、在反序列化这个类对象时，fastjson调用其setter方法，且setter方法存在漏洞，可以执行恶意代码。
+因此若能找到一个类、在反序列化这个类对象时，fastjson调用其setter或getter方法，且setter或getter方法存在漏洞，可以执行恶意代码。
 
 下面再列举一些FastJson的结论，在后续调试中可以观察得到：
 
@@ -167,7 +167,20 @@ public class Test {
 
 `com.alibaba.fastjson.parser.ParserConfig`：后面的AutoType开关和黑名单体现在这个类中
 
+满足条件的setter：
 
+* 函数名大于4且以set开头
+* 非静态函数
+* 返回类型为void或当前类
+* 参数个数为1个
+
+满足条件的getter
+
+* 函数名长度大于等于4
+* 非静态方法
+* 以get开头且第4个字母为大写
+* 无参数
+* 返回值类型继承自Collection或Map或AtomicBoolean或AtomicInteger
 
 
 
