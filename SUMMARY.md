@@ -31,7 +31,6 @@
 * Others
   * [C3P0](/Deserial/C3P0.md)
   * [SnakeYaml](/Deserial/SnakeYaml.md)
-  
 
 
 ## 🐎Memory Shell
@@ -43,3 +42,5 @@
 
 ## 🧲Shiro
 
+* [CC-Shiro](/Shiro/CC-Shiro.md)
+* [CB1与无CC依赖的反序列化链](/Shiro/CB1.md)
