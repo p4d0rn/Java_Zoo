@@ -5,6 +5,7 @@
 * [反射](Foundation/reflection.md)
 * [代理模式](Foundation/proxy.md)
 * [SPI](Foundation/SPI.md)
+* [JavaAgent](/Foundation/JavaAgent.md)
 * [动态加载字节码](/Foundation/ClassLoader.md)
 * [BCEL](/Foundation/BCEL.md)
 * [URLDNS](Foundation/URLDNS.md)
