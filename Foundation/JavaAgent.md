@@ -8,7 +8,7 @@ RASP是一种植入到应用程序内部或其运行时环境的安全技术。R
 
 JavaAgent是其背后的技术支持
 
-在Java SE 5及后续版本中，开发者可以构建一个独立于应用程序的代理程序（Agent），用来监测和协助运行在 JVM 上的程序，甚至能够替换和修改某些类的定义。
+在Java SE 5及后续版本中，开发者可以构建一个独立于应用程序的代理程序（Agent，就是个java类），用来监测和协助运行在 JVM 上的程序，还能够修改字节码，动态修改已加载或未加载的类以及它们的属性和方法。
 
 # 0x01 Basic Concept
 
@@ -19,9 +19,9 @@ Java Agent 有两种加载方式：
 
 `premain`相当于在main前类加载时进行字节码修改，而`agentmain`则是main后在类调用前通过重新转换类完成字节码修改。由于加载方式不同，所以premain只能在程序启动时指定Agent文件进行部署，而agentmain需要通过Attach API在程序运行后根据进程ID动态注入agent到jvm中。
 
-Java Agent 是通过使用Instrumentation构建出来的一个独立于应用程序的代理程序，用来监测和协助运行在 JVM 上的程序，甚至能够替换和修改某些类的定义。
+关键Instrumentation类（`java.lang.instrument`）：
 
-Instrumentation类：
+Java agent通过Instrumentation类和JVM进行交互，从而到达修改字节码的目的。
 
 ```java
 public interface Instrumentation {
@@ -29,7 +29,7 @@ public interface Instrumentation {
     //增加一个Class 文件的转换器，转换器用于改变 Class 二进制流的数据，参数 canRetransform 设置是否允许重新转换。
     void addTransformer(ClassFileTransformer transformer, boolean canRetransform);
 
-    //在类加载之前，重新定义 Class 文件，ClassDefinition 表示对一个类新的定义，如果在类加载之后，需要使用 retransformClasses 方法重新定义。addTransformer方法配置之后，后续的类加载都会被Transformer拦截。对于已经加载过的类，可以执行retransformClasses来重新触发这个Transformer的拦截。类加载的字节码被修改后，除非再次被retransform，否则不会恢复。
+    //在类加载之后，可以使用 retransformClasses 方法重新定义类。addTransformer方法配置之后，后续的类加载都会被Transformer拦截。对于已经加载过的类，可以执行retransformClasses来重新触发这个Transformer的拦截。类加载的字节码被修改后，除非再次被retransform，否则不会恢复。
     void addTransformer(ClassFileTransformer transformer);
 
     //删除一个类转换器
@@ -39,10 +39,26 @@ public interface Instrumentation {
 
     //在类加载之后，重新定义Class。该方法是1.6之后加入的，事实上，该方法是 update 了一个类。可以修改方法体，但是不能变更方法签名、增加和删除方法/类的成员属性
     void retransformClasses(Class<?>... classes) throws UnmodifiableClassException;
+    
+    // 获取目标已经加载的类。
+    @SuppressWarnings("rawtypes")
+    Class[] getAllLoadedClasses();
+    
 }
 ```
 
-## premain
+## 启动时加载-premain
+
+* Agent构造
+
+  * 实现premain方法
+
+  * mainfest清单中包含`Premain-Class`字段
+
+* 加载Agent
+
+  * 添加-javaagent参数指定Agent（jar包）
+  * 在运行main方法前会先调用Agent的premain方法
 
 ```java
 import java.lang.instrument.ClassFileTransformer;
@@ -86,8 +102,8 @@ jar打包方式：
               <addClasspath>true</addClasspath>
             </manifest>
             <manifestEntries>
-              <Premain-Class>com.demo.myAgent.testAgent</Premain-Class>
-              <Agent-Class>com.demo.myAgent.testAgent</Agent-Class>
+              <Premain-Class>com.demo.agent.MyAgent</Premain-Class>
+              <!--<Agent-Class>com.demo.agent.MyAgent</Agent-Class>-->
               <Can-Redefine-Classes>true</Can-Redefine-Classes>
               <Can-Retransform-Classes>true</Can-Retransform-Classes>
               <Can-Set-Native-Method-Prefix>true</Can-Set-Native-Method-Prefix>
@@ -114,8 +130,8 @@ jar打包方式：
 
   ```
   Manifest-Version: 1.0
-  Premain-Class: com.demo.myAgent.testAgent
-  Agent-Class: com.demo.myAgent.testAgent
+  Premain-Class: com.demo.agent.MyAgent
+  Agent-Class: com.demo.agent.MyAgent
   Can-Redefine-Classes: true
   Can-Retransform-Classes: true
   Can-Set-Native-Method-Prefix: true
@@ -162,7 +178,7 @@ public class MainTest {
 
 在 Java SE 6 的 Instrumentation 当中，提供了一个新的代理操作方法：agentmain，可以在 main 函数开始运行之后再运行。
 
-agentmain需要通过Attach API在程序运行后根据进程ID动态注入agent到jvm中，利用`VirtualMachine`的attach方法连接目标虚拟机
+agentmain需要通过Attach API在程序运行后根据进程ID动态注入agent到jvm中，利用`com.sun.tools.attach.VirtualMachine`的attach方法连接目标虚拟机
 
 通过VirtualMachine类的`attach(pid)`方法，便可以attach到一个运行中的java进程上，之后便可以通过`loadAgent(agentJarPath)`来将agent的jar包注入到对应的进程，然后对应的进程会调用agentmain方法。
 
@@ -233,6 +249,47 @@ public class Demo {
 }
 ```
 
-先启动Main测试了，再启动AttachMain来注入jar
+先启动Main测试类，再启动AttachMain来注入jar
 
 ![image-20230130132658663](../.gitbook/assets/image-20230130132658663.png)
+
+由于 tools.jar 并不会在 JVM 启动的时候默认加载，尝试利用URLClassloader来加载tools.jar
+
+```java
+import java.io.File;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.List;
+
+public class AttachMain {
+    public static void main(String[] args) throws Exception {
+        File toolsPath = new java.io.File(System.getProperty("java.home").replace("jre", "lib") + java.io.File.separator + "tools.jar");
+        System.out.println(toolsPath.toURI().toURL());
+        URL url = toolsPath.toURI().toURL();
+        URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+        Class<?> MyVirtualMachine = classLoader.loadClass("com.sun.tools.attach.VirtualMachine");
+        Class<?> MyVirtualMachineDescriptor = classLoader.loadClass("com.sun.tools.attach.VirtualMachineDescriptor");
+
+        Method listMethod = MyVirtualMachine.getDeclaredMethod("list");
+        List<Object> list = (List<Object>) listMethod.invoke(MyVirtualMachine);
+
+        for (Object o : list) {
+            Method displayName = MyVirtualMachineDescriptor.getDeclaredMethod("displayName");
+            String name = (String) displayName.invoke(o);
+            System.out.println(name);
+            if (name.contains("com.test.Demo")) {
+                Method getId = MyVirtualMachineDescriptor.getDeclaredMethod("id");
+                Method attach = MyVirtualMachine.getDeclaredMethod("attach", String.class);
+                String id = (String) getId.invoke(o);
+                Object vm = attach.invoke(o, id);
+                Method loadAgent = MyVirtualMachine.getDeclaredMethod("loadAgent", String.class);
+                loadAgent.invoke(vm, "D:\\Code\\Java\\JavaSec\\JavaAgent01\\target\\JavaAgent01-1.0-SNAPSHOT.jar");
+                Method detach = MyVirtualMachine.getDeclaredMethod("detach");
+                detach.invoke(vm);
+            }
+        }
+    }
+}
+```
+

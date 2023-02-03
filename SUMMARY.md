@@ -33,13 +33,28 @@
   * [C3P0](/Deserial/C3P0.md)
   * [SnakeYaml](/Deserial/SnakeYaml.md)
 
-
 ## 🐎Memory Shell
 
-* [Tomcat-Listener](listener.md)
-* [Tomcat-Filter](/filter.md)
-* [Tomcat-Servlet](servlet.md)
-* [Tomcat-Valve](valve.md)
+* Servlet API型
+
+  * [Tomcat-Listener](/MemShell/listener.md)
+
+  * [Tomcat-Filter](/MemShell/filter.md)
+
+  * [Tomcat-Servlet](/MemShell/servlet.md)
+
+* [Agent内存马](/MemShell/agent.md)
+
+* 中间件型
+
+  * [Tomcat-Valve](/MemShell/valve.md)
+  * [Tomcat-Executor](/MemShell/executor.md)
+  * [Tomcat-Upgrade](/MemShell/upgrade.md)
+
+* 其他
+
+  * [WebSocket](/MemShell/websocket.md)
+  * [Tomcat JSP](/MemShell/jsp.md)
 
 ## 🧲Shiro
 
