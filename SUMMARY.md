@@ -52,9 +52,10 @@
   * [Tomcat-Upgrade](/MemShell/upgrade.md)
 
 * 其他
-
+  * [IDEA本地调试Tomcat](/MemShell/de_tomcat.md)
   * [WebSocket](/MemShell/websocket.md)
   * [Tomcat JSP](/MemShell/jsp.md)
+  
 
 ## 🧲Shiro
 
