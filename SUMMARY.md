@@ -6,12 +6,14 @@
 * [代理模式](Foundation/proxy.md)
 * [SPI](Foundation/SPI.md)
 * [JavaAgent](/Foundation/JavaAgent.md)
+* [双亲委派模型](/Foundation/Parents_Delegate.md)
 * [动态加载字节码](/Foundation/ClassLoader.md)
 * [BCEL](/Foundation/BCEL.md)
 * [URLDNS](Foundation/URLDNS.md)
 * [RMI](Foundation/RMI.md)
 * [JNDI](Foundation/JNDI.md)
 * [Tomcat架构](Foundation/tomcat.md)
+* [Expression Language](Foundation/EL.md)
 
 ## 👻Deserialize
 * Commons Collections
