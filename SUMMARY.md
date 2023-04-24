@@ -34,7 +34,11 @@
 
   * [FastJson-JdbcRowSetImpl](/Deserial/FastJson_JdbcRowSetImpl.md)
 
+  * [FastJson-BasicDataSource](/Foundation/BCEL.md)
+  
   * [FastJson-ByPass](/Deserial/FastJson_ByPass.md)
+  
+  * [原生反序列化](https://paper.seebug.org/2055/)
 * [C3P0](/Deserial/C3P0.md)
 * [SnakeYaml](/Deserial/SnakeYaml.md)
 * [MySQL JDBC Attack](/Deserial/mysql.md)
