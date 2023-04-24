@@ -76,13 +76,16 @@
 * [Remember Me反序列化 CC-Shiro](/Shiro/CC-Shiro.md)
 * [CB1与无CC依赖的反序列化链](/Shiro/CB1.md)
 
-## 🏷Others
+## 🍺Others
+
+* [A New Blazer 4 getter RCE](/Others/newGetter.md)
 
 * [Apache Commons Jxpath](/Others/jxpath.md)
 
 ## 🚩CTF
 
 * [长城杯-b4bycoffee(ROME反序列化)](/CTF/b4bycoffee.md)
+* [MTCTF2022-easyjava(CB+Shiro绕过)](/CTF/MTCTF2022-eastjava.md)
 
 ## 🔍Code Inspector
 
