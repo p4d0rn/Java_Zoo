@@ -3,11 +3,13 @@
 ## 🍭Prerequisites
 
 * [反射](Foundation/reflection.md)
+* [命令执行](Foundation/exec.md)
 * [代理模式](Foundation/proxy.md)
 * [双亲委派模型](/Foundation/Parents_Delegate.md)
 * [SPI](Foundation/SPI.md)
 * [动态加载字节码](/Foundation/ClassLoader.md)
 * [BCEL](/Foundation/BCEL.md)
+* [Unsafe](/Foundation/unsafe.md)
 * [URLDNS](Foundation/URLDNS.md)
 * [RPC Intro](Foundation/RPC.md)
 * [RMI](Foundation/RMI.md)
@@ -38,7 +40,9 @@
   
   * [FastJson-ByPass](/Deserial/FastJson_ByPass.md)
   
-  * [原生反序列化](https://paper.seebug.org/2055/)
+  * [FastJson与原生反序列化(一)](https://paper.seebug.org/2055/)
+  
+  * [FastJson与原生反序列化(二)](https://y4tacker.github.io/2023/04/26/year/2023/4/FastJson与原生反序列化-二/)
 * [C3P0](/Deserial/C3P0.md)
 * [SnakeYaml](/Deserial/SnakeYaml.md)
 * [MySQL JDBC Attack](/Deserial/mysql.md)
@@ -46,6 +50,7 @@
 * [XStream](/Deserial/XStream.md)
 * [Rome](/Deserial/Rome.md)
 * [Hessian](/Deserial/Hessian.md)
+* [Hessian_Only_JDK](/Deserial/hessian_only_jdk.md)
 * [Dubbo](/Deserial/dubbo.md)
 
 ## 🐎Memory Shell
@@ -82,14 +87,18 @@
 
 ## 🍺Others
 
+* [反序二逝](/Others/deserTwice.md)
+
 * [A New Blazer 4 getter RCE](/Others/newGetter.md)
 
 * [Apache Commons Jxpath](/Others/jxpath.md)
 
 ## 🚩CTF
 
-* [长城杯-b4bycoffee(ROME反序列化)](/CTF/b4bycoffee.md)
-* [MTCTF2022-easyjava(CB+Shiro绕过)](/CTF/MTCTF2022-eastjava.md)
+* [长城杯-b4bycoffee (ROME反序列化)](/CTF/b4bycoffee.md)
+* [MTCTF2022-easyjava (CB+Shiro绕过)](/CTF/MTCTF2022-eastjava.md)
+* [CISCN 2023 deserBug (高版本Commons Collections下其他依赖的利用)](/CTF/deserbug.md)
+* [CISCN 2021 总决赛 ezj4va (AspectJWeaver写字节码文件到classpath)](/CTF/ezj4va.md)
 
 ## 🔍Code Inspector
 

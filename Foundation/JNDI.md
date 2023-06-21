@@ -293,7 +293,7 @@ public class calc {
 
 **Patch**
 
-JDK 6u132、7u122、8u113之后：增加了 com.sun.jndi.rmi.object.trustURLCodebase 选项，默认为 false，禁止RMI和CORBA协议使用远程codebase的选项，因此RMI和CORBA在以上的JDK版本上已经无法触发该漏洞。
+JDK 6u132、7u122、8u113之后：增加了 `com.sun.jndi.rmi.object.trustURLCodebase` 选项，默认为 false，禁止RMI和CORBA协议使用远程codebase的选项，因此RMI和CORBA在以上的JDK版本上已经无法触发该漏洞。
 
 在RegistryContext中，会判断 trustURLCodebase，默认为false
 

