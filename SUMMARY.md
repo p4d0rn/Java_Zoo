@@ -51,6 +51,7 @@
 * [Rome](/Deserial/Rome.md)
 * [Hessian](/Deserial/Hessian.md)
 * [Hessian_Only_JDK](/Deserial/hessian_only_jdk.md)
+* [Kryo](/Deserial/Kryo.md)
 * [Dubbo](/Deserial/dubbo.md)
 
 ## 🐎Memory Shell
