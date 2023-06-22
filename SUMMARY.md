@@ -97,7 +97,8 @@
 
 * [长城杯-b4bycoffee (ROME反序列化)](/CTF/b4bycoffee.md)
 * [MTCTF2022-easyjava (CB+Shiro绕过)](/CTF/MTCTF2022-eastjava.md)
-* [CISCN 2023 deserBug (高版本Commons Collections下其他依赖的利用)](/CTF/deserbug.md)
+* [CISCN 2023 西南赛区半决赛 (Hessian原生JDK+Kryo反序列化)](/CTF/seacloud.md)
+* [CISCN 2023 初赛 (高版本Commons Collections下其他依赖的利用)](/CTF/deserbug.md)
 * [CISCN 2021 总决赛 ezj4va (AspectJWeaver写字节码文件到classpath)](/CTF/ezj4va.md)
 
 ## 🔍Code Inspector
