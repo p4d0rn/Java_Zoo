@@ -11,7 +11,7 @@
 前置知识（题目就给了这两个提示）：
 
 * [Hessian原生JDK利用](../Deserial/hessian_only_jdk.md)
-* [Kryo反序列化]
+* [Kryo反序列化](../Deserial/Kryo.md)
 
 ## Analysis
 
