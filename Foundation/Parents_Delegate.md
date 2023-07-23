@@ -106,8 +106,10 @@ java中所有类都继承了`Object`，而加载自定义类显然还会加载�
 
 如果创建线程时未设置上下文类加载器，将会从父线程（`parent = currentThread()`）中获取，如果在应用程序的全局范围内都没有设置过，就默认是应用程序类加载器。
 
-参考：
+# 0x05 Res
 
 * [Java双亲委派模型：为什么要双亲委派？如何打破它？破在哪里？_徐同学呀的博客-CSDN博客_java为什么用双亲委派](https://stefan.blog.csdn.net/article/details/117457014)
 
 * [面试必问：什么是双亲委派模型？-51CTO.COM](https://www.51cto.com/article/745615.html)
+
+* [深入理解Java类加载 - czwbig - 博客园 (cnblogs.com)](https://www.cnblogs.com/czwbig/p/11127222.html)

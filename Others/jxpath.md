@@ -60,37 +60,6 @@ public class dog {
                 '}';
     }
 }
-package com.example.first;
-
-import java.io.IOException;
-
-public class dog {
-    public String name;
-    private Integer age;
-
-    public dog(String name, Integer age) {
-        System.out.println("Constructor Called");
-        this.name = name;
-        this.age = age;
-    }
-
-    public static void evil(String cmd){
-        try {
-            Runtime.getRuntime().exec(cmd);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public String toString() {
-        return "dog{" +
-                "name='" + name + '\'' +
-                ", age=" + age +
-                '}';
-    }
-}
-
 
 public static void main(String[] args) {
     JXPathContext context = JXPathContext.newContext(null);

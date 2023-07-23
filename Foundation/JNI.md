@@ -4,6 +4,8 @@ JNI：Java Native Interface
 
 Java是基于C语言实现的，很多底层API都是通过调用JNI来实现的。
 
+与硬件、操作系统交互的操作可以使用JNI来提升程序性能
+
 JNI让Java能够调用编译好的动态链接库里的方法（存在跨平台问题👊）
 
 像我们熟悉的`Class.forName()`最底层就是C去实现的，它被`native`修饰

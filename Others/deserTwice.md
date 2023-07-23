@@ -122,6 +122,12 @@ Signature signingEngine = Signature.getInstance("DSA");
 SignedObject signedObject = new SignedObject(object_with_evil_readObject, privateKey, signingEngine);
 ```
 
+# SerializationUtils
+
+`org.springframework.util.SerializationUtils.deserialize`
+
+
+
 
 
 # RMIConnector
@@ -380,8 +386,6 @@ public static Map parseUserOverridesAsString( String userOverridesAsString ){
 
 注意这里字符截取是从`HASM_HEADER.length() + 1`到`userOverridesAsString.length() - 1`，最后一位会吃掉
 
-
-
 `SerializableUtils#fromByteArray`
 
 ```java
@@ -473,16 +477,6 @@ public class Exp {
     }
 }
 ```
-
-
-
-
-
-
-
-
-
-
 
 # Reference
 
