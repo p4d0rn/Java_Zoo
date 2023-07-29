@@ -57,7 +57,7 @@ public class Test {
 // MyClass{hello='Hello Kryo', num=11}
 ```
 
-# 0x02 Ser and Deser
+# 0x03 Ser and Deser
 
 `Kryo`提供了三组方法来读写对象
 
@@ -194,7 +194,7 @@ object = (T)serializer.read(this, input, type);
 
 ![image-20230622095425825](../.gitbook/assets/image-20230622095425825.png)
 
-# 0x03 Way To Attack
+# 0x04 Way To Attack
 
 网上找到的Kryo反序列化问题都是放在Dubbo那块的。Dubbo默认的序列化协议是Hessian，但可以修改Dubbo协议数据包中的header，指定SerializationID，来确定Consumer和Provider通信使用的序列化协议，这里就不细讲Dubbo数据包的修改了，而是抽取其中关键的Kryo反序列化，Dubbo相关的具体可以看[这里](./dubbo.md)
 
@@ -258,7 +258,7 @@ public boolean equals(Object other) {
 
 这里触发`com.alibaba.fastjson.JSON`类的`toString()`函数，进而调用`JSONSerializer`的`write()`函数，从而触发Fastjson Gadget
 
-# 0x04 Reference
+# 0x05 Reference
 
 * [浅析Dubbo Kryo/FST反序列化漏洞（CVE-2021-25641）Mi1k7ea](https://www.mi1k7ea.com/2021/06/30/浅析Dubbo-KryoFST反序列化漏洞（CVE-2021-25641）/)
 

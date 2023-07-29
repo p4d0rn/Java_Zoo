@@ -42,6 +42,8 @@
   * [FastJson与原生反序列化(一)](https://paper.seebug.org/2055/)
   
   * [FastJson与原生反序列化(二)](https://y4tacker.github.io/2023/04/26/year/2023/4/FastJson与原生反序列化-二/)
+  
+  * [Jackson的原生反序列化利用](./Deserial/jackson.md)
 * [C3P0](./Deserial/C3P0.md)
 * [SnakeYaml](./Deserial/SnakeYaml.md)
 * [MySQL JDBC Attack](./Deserial/mysql.md)
@@ -107,7 +109,7 @@
 * [CISCN 2023 西南赛区半决赛 (Hessian原生JDK+Kryo反序列化)](./CTF/seacloud.md)
 * [CISCN 2023 初赛 (高版本Commons Collections下其他依赖的利用)](./CTF/deserbug.md)
 * [CISCN 2021 总决赛 ezj4va (AspectJWeaver写字节码文件到classpath)](./CTF/ezj4va.md)
-* [D^3CTF2023 (新的getter利用+高版本JNDI不出网利用+Hessian异常toString)](./CTF/d3java.md)
+* [D^3CTF2023 (新的getter+高版本JNDI不出网+Hessian异常toString)](./CTF/d3java.md)
 
 ## 🔍Code Inspector
 
