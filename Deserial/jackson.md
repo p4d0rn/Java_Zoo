@@ -26,11 +26,11 @@ Jackson的使用和Fastjson类似
 
 查看报错StackTrace
 
-![image-20230727162629130](..\.gitbook\assets\image-20230727162629130.png)
+![image-20230727162629130](../.gitbook/assets/image-20230727162629130.png)
 
 `invokeWriteReplace`判断`writeReplaceMethod`是否存在，存在则调用
 
-![image-20230727162824036](..\.gitbook\assets\image-20230727162824036.png)
+![image-20230727162824036](../.gitbook/assets/image-20230727162824036.png)
 
 简单粗暴，把这个类的`writeReplaceMethod`删掉即可
 
