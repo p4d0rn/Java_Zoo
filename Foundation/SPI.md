@@ -56,15 +56,12 @@ public class SPI_2 implements SpiService{
 ```java
 package com.demo.spi;
 
-import java.util.Iterator;
 import java.util.ServiceLoader;
 
 public class SpiTest {
     public static void main(String[] args) {
         ServiceLoader<SpiService> serviceLoader = ServiceLoader.load(SpiService.class);
-        Iterator<SpiService> iterator = serviceLoader.iterator();
-        while (iterator.hasNext()) {
-            SpiService spiService = iterator.next();
+        for (SpiService spiService : serviceLoader) {
             spiService.say();
         }
     }
@@ -73,16 +70,48 @@ public class SpiTest {
 
 # 0x03 SPI + JDBC
 
-JDBC连接数据库经常是下面的写法：
-
-1. **首先注册驱动，告诉程序使用哪种数据库**
-
+```xml
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>8.0.27</version>
+</dependency>
 ```
-Class.forName("com.mysql.cj.jdbc.Driver")
+
+JDBC连接数据库经常是下面的写法，首先是注册驱动，告诉程序使用哪种数据库
+
+```java
+// 注册驱动
+Class.forName("com.mysql.cj.jdbc.Driver");
+// 获取连接对象
+Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/test","root", "root");
 ```
 
-2. 通过反射要求JVM查找并加载指定的类
-3. 加载类的过程种会执行类中的**静态代码**
+驱动jar包下的`META-INF/services`文件夹中的`java.sql.Driver`文件(文件名为SPI接口)中已经把Driver类路径记录下来了
+
+若程序中没有注册驱动，会先读取这个文件，自动注册驱动。
+
+这里就用到了SPI技术，**它通过在ClassPath路径下的META-INF/services文件夹查找文件**，实现**类自动加载**
+
+![image-20230123013953375](../.gitbook/assets/image-20230123013953375.png)
+
+Java类加载过程中，有一步是初始化(Initialization)，初始化阶段会执行被加载类的Static Blocks。
+
+![image-20230123014138191](../.gitbook/assets/image-20230123014138191.png)
+
+注册驱动时执行了`Class.forName("com.mysql.cj.jdbc.Driver")`，`Class.forName()`默认会进行类的初始化
+
+```java
+@CallerSensitive
+public static Class<?> forName(String className) throws ClassNotFoundException {
+    Class<?> caller = Reflection.getCallerClass();
+    // 第二个参数为initialized，表示是否进行初始化
+    // 第三个参数为类加载器，默认使用调用者的ClassLoader
+    return forName0(className, true, ClassLoader.getClassLoader(caller), caller);
+}
+```
+
+`com.mysql.cj.jdbc.Driver`的静态代码中调用了`DriverManager`的`registerDriver`静态方法
 
 ```java
 package com.mysql.cj.jdbc;
@@ -105,29 +134,7 @@ public class Driver extends NonRegisteringDriver implements java.sql.Driver {
 }
 ```
 
-对于MySQL5以上版本的驱动jar包，可以省略注册驱动的过程
-
-驱动jar包下的META-INF下的services文件夹中的java.sql.Driver文件中已经把Driver类路径记录下来了
-
-若程序中没有注册驱动，会先读取这个文件，自动注册驱动。
-
-这里就用到了SPI技术，**它通过在ClassPath路径下的META-INF/services文件夹查找文件**
-
-![image-20230123013953375](../.gitbook/assets/image-20230123013953375.png)
-
-可以看到SPI可以实现**类自动加载**
-
-# 0x04 Deep Source
-
-Java类加载过程中，有一步是初始化(Initialization)，初始化阶段会执行被加载类的Static Blocks。
-
-![image-20230123014138191](../.gitbook/assets/image-20230123014138191.png)
-
-注册驱动时执行了`Class.forName("com.mysql.cj.jdbc.Driver")`
-
-`com.mysql.cj.jdbc.Driver`的静态代码中调用了`DriverManager`的`registerDriver`静态方法
-
-因此JVM会去加载`DriverManager`类，进而执行`DriverManager`的静态代码，调用类中的`loadInitialDrivers`方法
+因此JVM会尝试去加载`DriverManager`类，进而执行`DriverManager`的静态代码，调用类中的`loadInitialDrivers`方法
 
 ```java
 static {
@@ -140,12 +147,10 @@ private static void loadInitialDrivers() {
         try {
             drivers = AccessController.doPrivileged(new PrivilegedAction<String>() {
                 public String run() {
-                    return System.getProperty("jdbc.drivers");
+                    return System.getProperty("jdbc.drivers"); // 也可以通过设置系统属性来加载驱动
                 }
             });
-        } catch (Exception ex) {
-            drivers = null;
-        }
+        } //...
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
                 ServiceLoader<Driver> loadedDrivers = ServiceLoader.load(Driver.class);
@@ -156,6 +161,13 @@ private static void loadInitialDrivers() {
                     }
             }
         // ....
+        String[] driversList = drivers.split(":");
+        for (String aDriver : driversList) {
+            try {
+                Class.forName(aDriver, true,
+                        ClassLoader.getSystemClassLoader());
+            } // ...
+        }
 }
 ```
 
@@ -190,22 +202,22 @@ hasNext => hasNextService
 
 ```java
 private S nextService() {
-        if (!hasNextService())
-            throw new NoSuchElementException();
-        String cn = nextName;
-        nextName = null;
-        Class<?> c = null;
-        try {
-            c = Class.forName(cn, false, loader);
+    if (!hasNextService())
+        throw new NoSuchElementException();
+    String cn = nextName;
+    nextName = null;
+    Class<?> c = null;
+    try {
+        c = Class.forName(cn, false, loader);
         //...
-}
+    }
 ```
 
 * `Thread.currentThread().getContextClassLoader();`获取类加载器
 
 * 扩展的实现类通过`c = Class.forName(cn, false, loader);`获取
 
-> `Class.forName()`使用当前的ClassLoader，我们是在`DriverManager`类里调用ServiceLoader的，所以当前类也就是`DriverManager`，它的加载器是`Bootstrap ClassLoader`。我们知道`Bootstrap ClassLoader`加载rt.jar包下的所有类，要用`Bootstrap ClassLoader`去加载用户自定义的类是违背双亲委派的，所以使用`Thread.currentThread().getContextClassLoader`去指定`AppClassLoader`
+> `Class.forName()`默认使用调用者的ClassLoader，我们是在`DriverManager`类里调用ServiceLoader的，所以调用类也就是`DriverManager`，它的加载器是`Bootstrap ClassLoader`。我们知道`Bootstrap ClassLoader`加载rt.jar包下的所有类，要用`Bootstrap ClassLoader`去加载用户自定义的类是违背双亲委派的，所以使用`Thread.currentThread().getContextClassLoader`去指定`AppClassLoader`
 
 查看ClassPath下有那些JDBC Driver
 
@@ -228,7 +240,7 @@ public class JdbcDriverList {
 
 ![image-20230123015151674](../.gitbook/assets/image-20230123015151674.png)
 
-# 0x05 JDBC Driver后门
+# 0x04 JDBC Driver后门
 
 现在我们尝试自己编写一个后门驱动jar包，让用户引入后门jar包，在建立JDBC连接时，触发执行命令
 

