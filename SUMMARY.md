@@ -3,6 +3,7 @@
 ## 🍭Prerequisites
 
 * [反射](Foundation/reflection.md)
+* [高版本JDK反射绕过](Foundation/reflection2.md)
 * [命令执行](Foundation/exec.md)
 * [代理模式](Foundation/proxy.md)
 * [双亲委派模型](/Foundation/Parents_Delegate.md)
@@ -46,20 +47,24 @@
   * [Jackson的原生反序列化利用](./Deserial/jackson.md)
 * [C3P0](./Deserial/C3P0.md)
 * [SnakeYaml](./Deserial/SnakeYaml.md)
-* [MySQL JDBC Attack](./Deserial/mysql.md)
 * [Log4j](./Deserial/log4j2.md)
-* [XStream](./Deserial/XStream.md)
+* [AspectJWeaver](./Deserial/AspectJWeaver.md)
 * [Rome](./Deserial/Rome.md)
 * [Hessian](./Deserial/Hessian.md)
 * [Hessian_Only_JDK](./Deserial/hessian_only_jdk.md)
 * [Kryo](./Deserial/Kryo.md)
 * [Dubbo](./Deserial/dubbo.md)
 
+## 🪄JDBC Attack
+
+* [MySQL JDBC Attack](./JDBC/mysql.md)
+* [H2 JDBC Attack](./JDBC/h2.md)
+
 ## 🌵RASP
 
 * [JavaAgent](./Foundation/JavaAgent.md)
 * [JVM](./RASP/jvm.md)
-* [ASM](./RASP/asm.md)
+* [ASM]()
 * [OpenRASP]()
 
 ## 🐎Memory Shell
@@ -115,7 +120,7 @@
 
 * CodeQL 🐳
   * [CodeQL Quick Start](./Utils/CodeQL_Basic.md)
-  * [CodeQL For Java](./Utils/CodeQL4Java.md)
+  * [CodeQL 4 Java](./Utils/CodeQL4Java.md)
 * Tabby 🦀
 * Theory
   * [Static Analysis](./Theory/Static_Analysis.md)

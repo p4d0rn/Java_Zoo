@@ -62,8 +62,6 @@ exec.setAccessible(true);
 exec.invoke(obj, 2, path, prog, argBlock, argc, null, 0, null, ineEmpty, false);
 ```
 
-
-
 注意这个方法并不会执行任何构造方法
 
 有时候使用反射去创建实例时，会遇到各种复杂的类依赖关系，此时也可以考虑用这个去实例化对象

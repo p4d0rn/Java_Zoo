@@ -108,6 +108,28 @@ public class Person {
 >   若method是一个静态方法，则第一个参数是类
 >   第二个参数也是可变长参数，传入method所需的参数
 
+## 修改常量
+
+需要修改modifier
+
+```java
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
+public class TestReflection {
+    public static final String test = "abc";
+    public static void main(String[] args) throws Exception{
+        TestReflection testReflection = new TestReflection();
+        Field test = testReflection.getClass().getDeclaredField("test");
+        Field modifier = test.getClass().getDeclaredField("modifiers");
+        modifier.setAccessible(true);
+        modifier.setInt(test,test.getModifiers() & ~Modifier.FINAL);
+        test.set(testReflection,"success");
+        System.out.println(test.get(testReflection));
+    }
+}
+```
+
 # 0x03 Best Practice
 
 下面利用反射来实现命令执行
