@@ -1,7 +1,5 @@
 
 
-
-
 # 静态常量修改
 
 修改`static final`属性值，关键在于通过反射将字段的`final`修饰符去掉
@@ -84,15 +82,13 @@ Java不像其他脚本语言，如js、php、python等有eval函数，可以把�
 
 加载字节码的几种方法：
 
+* URLClassLoader#loadClass：需要出网或文件落地，不好使
+* TransletClassLoader#defineClass：一般通过反序列化漏洞打进来
+* ClassLoader#defineClass：需要通过反射调用
 
+通过JS配合`ClassLoader#defineClass`来做到任意代码执行
 
-
-
-
-
-
-
-
+JDK版本更迭史：
 
 * JDK6、7
   * 引入JS引擎、采用Rhino实现，不支持`Java.type`等获取Java类型的操作
@@ -108,10 +104,6 @@ Java不像其他脚本语言，如js、php、python等有eval函数，可以把�
   * `Reflection`类下的`fieldFilterMap`增加过滤。反射被大大限制
 * JDK15
   * JS引擎被移除JDK
-
-
-
-
 
 ## JDK11
 
