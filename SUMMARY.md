@@ -116,7 +116,7 @@
 * [CISCN 2023 初赛 (高版本Commons Collections下其他依赖的利用)](./CTF/deserbug.md)
 * [CISCN 2021 总决赛 ezj4va (AspectJWeaver写字节码文件到classpath)](./CTF/ezj4va.md)
 * [D^3CTF2023 (新的getter+高版本JNDI不出网+Hessian异常toString)](./CTF/d3java.md)
-* [WMCTF2023](./CTF/WMCTF2023.md)
+* [WMCTF2023（CC链花式玩法+盲读文件）](./CTF/WMCTF2023.md)
 
 ## 🔍Code Inspector
 
