@@ -8,4 +8,6 @@ Welcome To My Java Palace😝
 
 Stars would be appreciated if you like it⭐
 
-https://github.com/p4d0rn/Java_Zoo
+repository: https://github.com/p4d0rn/Java_Zoo
+
+gitbook: https://p4d0rn.gitbook.io/java
