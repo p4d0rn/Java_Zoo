@@ -14,6 +14,7 @@
 * [URLDNS](Foundation/URLDNS.md)
 * [RPC Intro](Foundation/RPC.md)
 * [RMI](Foundation/RMI.md)
+* [JMX](Foundation/JMX.md)
 * [JNDI](Foundation/JNDI.md)
 * [Tomcat架构](Foundation/tomcat.md)
 * [Expression Language](Foundation/EL.md)
