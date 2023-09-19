@@ -67,10 +67,10 @@
 * [JavaAgent](./Foundation/JavaAgent.md)
 * [JVM](./RASP/jvm.md)
 * [ByteCode](./RASP/bytecode.md)
-* ASM
+* ASM 🪡
   * [ASM Intro](./RASP/asm0.md)
-  * [ASM Generation](./RASP/asm1.md)
-  * [ASM Transform](./RASP/asm2.md)
+  * [Class Generation](./RASP/asm1.md)
+  * [Class Transformation](./RASP/asm2.md)
   
 * [OpenRASP]()
 
