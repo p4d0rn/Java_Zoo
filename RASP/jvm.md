@@ -1,4 +1,4 @@
-# 0x01 Intro
+# 0x01 JVM Intro
 
 Java是一门**面向对象、静态类型**的语句，具有跨平台的特点，“一次编译、到处运行”
 
@@ -84,13 +84,44 @@ JVM默认提供三个类加载器
 
 当一个线程创建运行时，与之对应的栈就创建了，每个栈中的数据都是私有的，其他线程不能访问。
 
-每个线程对应一个栈，每个栈包含若干栈帧，每个栈帧对应着每个方法的每次调用
+每个线程对应一个栈（JVM stack），每个栈包含若干栈帧（stack frame），每个栈帧对应着每个方法的每次调用
+
+当调用一个新的方法时，就会在JVM Stack上分配一个frame空间（入栈）；当方法退出时，相应的frame空间也会在JVM Stack上被清除（出栈）
 
 栈帧包含三个部分
 
 * 局部变量区（基本类型变量、对象实例的引用）
 * 操作数栈区（存放执行过程产生的中间结果）
 * 运行环境区
+
+局部变量区local variable是一个数组，索引从0开始
+
+操作数栈区operand stack是一个栈结构，遵循后进先出LIFO
+
+在编译的时候，local variable和operand stack的空间大小就被确定下来了
+
+在运行时，local variable和operand stack上存放的数据会随着方法的执行而不断发生变化
+
+在方法刚开始调用时，operand stack为空，不存储任何数据，而local variable的状态就由当前方法决定了
+
+* 非静态方法：local variable索引0处存储`this`变量
+* 方法参数：`long`和`double`占用local variable的两个slot，其他类型占用一个slot
+
+以下面的类为例，使用`ASM Bytecode Viewer`查看
+
+```java
+package sample;
+
+public class HelloWorld {
+    public int add(int a, long b) {
+        return 1;
+    }
+}
+```
+
+![image-20230918194133007](./../.gitbook/assets/image-20230918194133007.png)
+
+可以看到MAXSTACK和MAXLOCALS这时候已经确定了。
 
 ## Native Method Stack
 

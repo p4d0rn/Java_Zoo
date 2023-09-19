@@ -1,4 +1,4 @@
-# 二次反序列化
+# Deserial Twice
 
 最近遇到了很多java题目，大都弄了个类继承`ObjectInputStream`，重写其`resolveClass`方法，在里面添加对反序列化类黑名单的校验。比如下面这个
 

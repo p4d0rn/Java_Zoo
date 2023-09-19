@@ -66,7 +66,12 @@
 
 * [JavaAgent](./Foundation/JavaAgent.md)
 * [JVM](./RASP/jvm.md)
-* [ASM]()
+* [ByteCode](./RASP/bytecode.md)
+* ASM
+  * [ASM Intro](./RASP/asm0.md)
+  * [ASM Generation](./RASP/asm1.md)
+  * [ASM Transform](./RASP/asm2.md)
+  
 * [OpenRASP]()
 
 ## 🐎Memory Shell
@@ -103,7 +108,7 @@
 
 ## 🍺Others
 
-* [反序二逝](./Others/deserTwice.md)
+* [反序二度](./Others/deserTwice.md)
 
 * [A New Blazer 4 getter RCE](./Others/newGetter.md)
 

@@ -1,6 +1,6 @@
 # 0x01 What Is BCEL
 
-BCEL的全名是Apache Commons BCEL，属于Apache Commons项目下的一个子项目，BCEL库提供了一系列用于分析、创建、修改Java Class文件的API。相较Commons Collections，BCEL被包含在原生JDK中，更容易被利用。
+BCEL(Byte Code Engineering Library)的全名是Apache Commons BCEL，属于Apache Commons项目下的一个子项目，BCEL库提供了一系列用于分析、创建、修改Java Class文件的API。相较Commons Collections，BCEL被包含在原生JDK中，更容易被利用。
 
 > BCEL Classloader在 JDK < 8u251之前是在rt.jar里面。
 >

@@ -1,14 +1,4 @@
-# 0x01 Intro
-
-ASM是一个通用的Java字节码操作和分析框架，可以用来：
-
-* 分析已有类
-* 修改现有类
-* 动态生成类
-
-由于ASM是字节码层面上的操作，因此我们需要先了解一下JVM和class文件
-
-# 0x02 Class ByteCode
+# Class ByteCode
 
 在字节码中，所有变量和方法都是以符号引用的形式保存在clas文件的常量池中。字节码被类加载器加载后，class文件中的常量池会被加载到方法区的运行时常量池，动态链接会将运行时常量池中的符号引用转化为调用方法的直接引用。
 
@@ -122,6 +112,8 @@ JVM会为每个方法分配对应的局部变量表。局部变量表也成为�
   > 还有其他用于用于装载非对象引用的指令
   >
   > iload、lload、fload、dload（i=int、l=long、f=float、d=double）
+  >
+  > 对应aload还有astore，将操作数栈栈顶元素放入局部变量表
 
 * 1 invokespecial #1
 
@@ -149,7 +141,7 @@ JVM会为每个方法分配对应的局部变量表。局部变量表也成为�
 >   * 调用私有方法
 >   * 调用父类方法
 > * invokeinterface：调用接口方法
-> * invokevirtual：调用虚方法（除上面三种情况之外的方法）
+> * invokevirtual：调用虚方法（除上面三种情况之外的方法，如调用对象方法）
 > * invokedynamic：Lambda的原理
 
 现在再看下面完整的字节码应该就不成问题了。
@@ -290,79 +282,19 @@ Constant pool:
 SourceFile: "Test.java"
 ```
 
-# 0x03 ASM API
+# CheatSheet
 
-~~IDEA可以配合`ASM Bytecode Outline`插件来查看字节码和对应的ASM框架生成代码~~（不兼容最新版IDEA）
-
-看到还有一个名字挺像的插件叫`ASM Bytecode Viewer`，就用它吧。。。
-
-先引入依赖
-
-```xml
-<properties>
-  <maven.compiler.source>8</maven.compiler.source>
-  <maven.compiler.target>8</maven.compiler.target>
-  <asm.version>9.3</asm.version>
-</properties>
-<dependencies>
-  <dependency>
-    <groupId>org.ow2.asm</groupId>
-    <artifactId>asm</artifactId>
-    <version>${asm.version}</version>
-  </dependency>
-  <dependency>
-    <groupId>org.ow2.asm</groupId>
-    <artifactId>asm-commons</artifactId>
-    <version>${asm.version}</version>
-  </dependency>
-  <dependency>
-    <groupId>org.ow2.asm</groupId>
-    <artifactId>asm-util</artifactId>
-    <version>${asm.version}</version>
-  </dependency>
-  <dependency>
-    <groupId>org.ow2.asm</groupId>
-    <artifactId>asm-tree</artifactId>
-    <version>${asm.version}</version>
-  </dependency>
-  <dependency>
-    <groupId>org.ow2.asm</groupId>
-    <artifactId>asm-analysis</artifactId>
-    <version>${asm.version}</version>
-  </dependency>
-
-</dependencies>
-```
-
-ASM库提供了两个用于生成和转换已编译类的API
-
-* core API
-
-  基于事件的形式来表示类
-
-* tree API
-
-  基于对象的形式来表示类
-
-又臭又长，直接看案例吧。。
-
-# 0x04 Best Practice
-
-来一场`JavaAgent`和`ASM`的梦幻联动🦉
-
-实现一个简易的RASP
-
-
-
-
-
-
-
-
-
-
-
-
+* ldc: 将int、float、或者一个类、方法类型或方法句柄的符号引用、String型常量值从常量池中推送至栈顶
+* iconst: -1~5的int数值常量入栈
+* bipush: -128~127的int数值常量入栈
+* ifeq：当栈顶int类型数值等于0时跳转
+* ifne：当栈顶int类型数值不等于0时跳转
+* iflt：当栈顶int类型数值小于0时跳转
+* ifle：当栈顶int类型数值小于等于0时跳转
+* ifgt：当栈顶int类型数值大于0时跳转
+* ifge：当栈顶int类型数值大于等于0时跳转
+* ifnull：为null时跳转
+* ifnonnull：不为null时跳转
 
 # Reference
 
