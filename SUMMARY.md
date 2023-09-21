@@ -71,7 +71,7 @@
   * [ASM Intro](./RASP/asm0.md)
   * [Class Generation](./RASP/asm1.md)
   * [Class Transformation](./RASP/asm2.md)
-  
+* [rasp防御命令执行](./RASP/rasp1.md)
 * [OpenRASP]()
 
 ## 🐎Memory Shell

@@ -347,6 +347,110 @@ public class MethodInOutVisitor extends ClassVisitor {
 
 `visitMethod`中判断当前方法名和方法描述符是否为目标方法，是则返回自定义的`MethodVisitor`。`visitInsn`判断当前`opcode`是否为throw或return
 
+#### AdviceAdapter
+
+ASM提供了一个抽象类来实现在方法进入前后添加逻辑，它有两个方法`onMethodEnter`和`onMethodExit`
+
+```java
+/*
+Generates the "before" advice for the visited method. The default implementation of this method does nothing. Subclasses can use or change all the local variables, but should not change state of the stack. This method is called at the beginning of the method or after super class constructor has been called (in constructors).
+*/
+protected void onMethodEnter() {}
+
+/*
+Generates the "after" advice for the visited method. The default implementation of this method does nothing. Subclasses can use or change all the local variables, but should not change state of the stack. This method is called at the end of the method, just before return and athrow instructions. The top element on the stack contains the return value or the exception instance. For example:
+  public void onMethodExit(final int opcode) {
+    if (opcode == RETURN) {
+      visitInsn(ACONST_NULL);
+    } else if (opcode == ARETURN || opcode == ATHROW) {
+      dup();
+    } else {
+      if (opcode == LRETURN || opcode == DRETURN) {
+        dup2();
+      } else {
+        dup();
+      }
+      box(Type.getReturnType(this.methodDesc));
+    }
+    visitIntInsn(SIPUSH, opcode);
+    visitMethodInsn(INVOKESTATIC, owner, "onExit", "(Ljava/lang/Object;I)V");
+  }
+ 
+  // An actual call back method.
+  public static void onExit(final Object exitValue, final int opcode) {
+    ...
+  }
+*/
+protected void onMethodExit(final int opcode) {}
+```
+
+```java
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.commons.AdviceAdapter;
+
+public class MethodAroundVisitor extends ClassVisitor {
+    private final String methodName;
+    private final String methodDesc;
+
+    public MethodAroundVisitor(int api, ClassVisitor classVisitor, String methodName, String methodDesc) {
+        super(api, classVisitor);
+        this.methodName = methodName;
+        this.methodDesc = methodDesc;
+    }
+
+    @Override
+    public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+        MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
+        if (name.equals(methodName) && descriptor.equals(methodDesc)) {
+            mv = new MethodAroundAdapter(api, mv, access, name, descriptor);
+        }
+        return mv;
+    }
+
+    private static class MethodAroundAdapter extends AdviceAdapter {
+        protected MethodAroundAdapter(int api, MethodVisitor methodVisitor, int access, String name, String descriptor) {
+            super(api, methodVisitor, access, name, descriptor);
+        }
+
+        private void hello(String s){
+            super.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
+            super.visitLdcInsn(s);
+            super.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
+        }
+
+        @Override
+        protected void onMethodEnter() {
+            hello("Method Enter...");
+        }
+
+        @Override
+        protected void onMethodExit(int opcode) {
+            if (opcode == ATHROW) {
+                super.visitLdcInsn("abnormal return");
+            }
+            else if (opcode == RETURN) {
+                super.visitLdcInsn("return void");
+            }
+            else if (opcode == ARETURN) {
+                dup();
+            }
+            else {
+                if (opcode == LRETURN || opcode == DRETURN) {
+                    dup2();
+                }
+                else {
+                    dup();
+                }
+                box(Type.getReturnType(this.methodDesc));
+            }
+            hello("Method Exit...");
+        }
+    }
+}
+```
+
 # The End
 
 暂时到这吧，后面有需要再回过来补充。
