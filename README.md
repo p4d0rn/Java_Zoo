@@ -23,11 +23,11 @@ gitbook: https://p4d0rn.gitbook.io/java
 * [RPC Intro](Foundation/RPC.md)
 * [RMI](Foundation/RMI.md)
 * [JMX](Foundation/JMX.md)
+* [JDWP](Foundation/JDWP.md)
 * [JNDI](Foundation/JNDI.md)
 * [Tomcat架构](Foundation/tomcat.md)
 * [Expression Language](Foundation/EL.md)
 * [JNI](./Foundation/JNI.md)
-* [jar包调试]()
 
 ## 👻Serial Journey
 
@@ -75,11 +75,11 @@ gitbook: https://p4d0rn.gitbook.io/java
 * [JavaAgent](./Foundation/JavaAgent.md)
 * [JVM](./RASP/jvm.md)
 * [ByteCode](./RASP/bytecode.md)
-* ASM
+* ASM 🪡
   * [ASM Intro](./RASP/asm0.md)
-  * [ASM Generation](./RASP/asm1.md)
-  * [ASM Transform](./RASP/asm2.md)
-
+  * [Class Generation](./RASP/asm1.md)
+  * [Class Transformation](./RASP/asm2.md)
+* [rasp防御命令执行](./RASP/rasp1.md)
 * [OpenRASP]()
 
 ## 🐎Memory Shell
@@ -142,4 +142,4 @@ gitbook: https://p4d0rn.gitbook.io/java
 * ByteCodeDL
 * Tabby 🦀
 * Theory
-  * [Static Analysis](
+  * [Static Analysis](./Theory/Static_Analysis.md)

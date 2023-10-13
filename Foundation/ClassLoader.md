@@ -13,7 +13,7 @@ java源代码（.java）通过java编译器（javac）编译成字节码文件�
 > Class.forName和ClassLoader.loadClass的区别：
 >
 > `forName(String name, boolean initialize,ClassLoader loader)` 可以指定classLoader。
-> 不显式传classLoader就是默认当前类的类加载器：
+> 不显式传classLoader就是默认调用类的类加载器，且进行类初始化：
 >
 > ```java
 > public static Class<?> forName(String className)
@@ -70,7 +70,7 @@ public class Hello {
 
 * loadClass：从已加载的类缓存、父加载器等位置寻找类（双亲委派机制），在前面没有找到的情况下，执行findClass
 * findClass：根据URL指定的方式来加载类字节码，可能会在本地文件系统或远程http服务器上读取字节码或jar包，然后交给defineClass
-* defineClass的作用是处理前面传入的字节码，将其处理成真正的Java类
+* defineClass：处理前面传入的字节码，将其处理成真正的Java类
 
 ```java
 import java.io.*;
@@ -205,9 +205,12 @@ private void defineTransletClasses() {
 ```
 
 * `defineTransletClasses`方法中`_tfactory.getExternalExtensionsMap()`
+  
   `_tfactory`是`TransformerFactoryImpl`类
   为了不抛出异常需要`_tfactory = new TransformerFactoryImpl()`
-
+  
+  （原生反序列化实际上不用，`_tfactory `被transient修饰，不能被序列化，`readObject`的时候会给这个字段赋值`_tfactory = new TransformerFactoryImpl();`）
+  
 * `getTransletInstance`方法中判断`if (_name == null) return null;`
   所以要给`_name`赋值（String）
 

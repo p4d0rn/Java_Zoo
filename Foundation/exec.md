@@ -2,10 +2,6 @@
 
 开发者设计本地命令执行的本意是实现某些程序功能
 
-如ps（进程管理）、top（内存管理）
-
-但对于攻击者来说这就是直捣黄龙的利器
-
 ## Runtime
 
 最简单的命令执行方法
@@ -16,13 +12,15 @@ Runtime.getRuntime().exec("calc");
 
 跟踪调用栈可以发现，`Runtime#exec`并不是命令执行的最终点
 
-```java
-java.lang.ProcessImpl.start
-java.lang.ProcessBuilder.start
-java.lang.Runtime.exec
-java.lang.Runtime.exec
-java.lang.Runtime.exec
-```
+> java.lang.Runtime#exec
+>
+> ​		-> java.lang.ProcessBuilder#start
+>
+> ​				-> java.lang.ProcessImpl#start
+>
+> ​					-> ProcessImpl#<init>
+>
+> ​						-> native create
 
 ## ProcessBuilder
 
@@ -51,8 +49,6 @@ public final class ProcessBuilder {
     }
 }
 ```
-
-
 
 ```java
 // ProcessBuilder processBuilder = new ProcessBuilder(Arrays.asList("calc"));
@@ -85,3 +81,5 @@ constructor.newInstance(new String[]{"calc"}, null, null, new long[]{-1,-1,-1}, 
 ![image-20230506140255428](../.gitbook/assets/image-20230506140255428.png)
 
 Linux和Mac系统上则是交给`UNIXProcess#forkAndExec` native方法
+
+![image-20230921171548250](../.gitbook/assets/image-20230921171548250.png)

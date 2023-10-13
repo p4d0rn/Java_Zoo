@@ -110,25 +110,54 @@ public class Person {
 
 ## 修改常量
 
-需要修改modifier
+思路很简单，就是修改modifier，modifier是`Field`类的属性
 
 ```java
+package Jdk8;
+
+import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-public class TestReflection {
-    public static final String test = "abc";
-    public static void main(String[] args) throws Exception{
-        TestReflection testReflection = new TestReflection();
-        Field test = testReflection.getClass().getDeclaredField("test");
-        Field modifier = test.getClass().getDeclaredField("modifiers");
+public class Test implements Serializable {
+    public final String secret = "abcdef";
+
+    public static void main(String[] args) throws Exception {
+        Test test = new Test();
+        Field field = test.getClass().getDeclaredField("secret");
+        Field modifier = field.getClass().getDeclaredField("modifiers");
         modifier.setAccessible(true);
-        modifier.setInt(test,test.getModifiers() & ~Modifier.FINAL);
-        test.set(testReflection,"success");
-        System.out.println(test.get(testReflection));
+        modifier.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        field.set(test, "success");
+        ser(test);
+        deser();
+    }
+
+    public static void ser(Object o) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(o);
+        FileOutputStream fos = new FileOutputStream("ser.out");
+        fos.write(baos.toByteArray());
+        fos.close();
+    }
+
+    public static void deser() throws Exception {
+        FileInputStream fis = new FileInputStream("ser.out");
+        byte[] bytes = new byte[2048];
+        fis.read(bytes);
+        fis.close();
+        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bytes));
+        Object o = ois.readObject();
+        for (Field f : o.getClass().getDeclaredFields()) {
+            f.setAccessible(true);
+            System.out.println(f.get(o));
+        }
     }
 }
 ```
+
+成功打印`success`，不存在`Serial VersionID`的问题
 
 # 0x03 Best Practice
 
@@ -157,7 +186,7 @@ public class TestReflection {
 
 ```java
 Class clazz = Class.forName("java.lang.Runtime");
-Object runTime = clazz.getMethod("getRuntime").invoke(clazz);
+Object runTime = clazz.getMethod("getRuntime").invoke(null);
 clazz.getMethod("exec", String.class).invoke(runTime, "calc");
 ```
 
@@ -192,11 +221,16 @@ clazz.getMethod("exec", String.class).invoke(constructor.newInstance(), "calc");
 
 # 0x04 Summary
 
+本文介绍了反射的如下使用
+
 - 动态实例化对象
 - 动态调用方法
 - 操作类内部私有属性和方法
+- 修饰常量
 
-在反序列化漏洞中的应用
+还提到了`java.lang.Runtime`的单例设计模式，类对象会在类初始化时创建，类对外提供`getXxx`的静态方法来获取类对象，因此每次获取到的对象都为同一个，故名为单例模式。并通过反射来调用的`Runtime`和`ProcessBuilder`的命令执行方法。
+
+反射在反序列化漏洞中的应用
 
 - 通过invoke调用除了同名函数以外的函数
 - 创建对象，引入不能序列化的类（比如传入Runtime.class）

@@ -1,5 +1,3 @@
-
-
 # 静态常量修改
 
 修改`static final`属性值，关键在于通过反射将字段的`final`修饰符去掉
@@ -32,7 +30,7 @@ System.out.println(secret.get(null));  // G0T_Y0U
 
 👉 `https://bugs.openjdk.org/browse/JDK-8210522`
 
-为防止安全敏感的字段被修改，JDK12开始引入了反射过滤机制
+为防止安全敏感的字段被修改，JDK12开始反射过滤机制增强
 
 对比 JDK11 和 JDK14 的`jdk.internal.reflect.Reflection`
 
@@ -62,6 +60,7 @@ Field modifierField = null;
 for (Field f : fields) {
     if ("modifiers".equals(f.getName())) {
         modifierField = f;
+        break;
     }
 }
 modifierField.setAccessible(true);
@@ -73,8 +72,6 @@ System.out.println(secret.get(null));
 ```
 
 # 反射加载字节码
-
-
 
 Java不像其他脚本语言，如js、php、python等有eval函数，可以把字符串当作代码来执行。
 
@@ -96,10 +93,10 @@ JDK版本更迭史：
   * JS引擎采用Nashorn实现
 * JDK9
   * 引入模块机制
-  * 部分非标准库的类被理出
+  * 部分非标准库的类被移除
 * JDK11
   * `Unsafe.defineClass`方法被移除
-  * 默认禁止跨包之间反射调用非共有方法
+  * 默认禁止跨包之间反射调用非公共方法
 * JDK12
   * `Reflection`类下的`fieldFilterMap`增加过滤。反射被大大限制
 * JDK15
@@ -286,7 +283,9 @@ JDK>=12报错提示：没有modifiers字段
 
 https://github.com/BeichenDream/Kcon2021Code/blob/master/bypassJdk/JdkSecurityBypass.java
 
-直接把`fieldFilterMap`置空了
+直接把`fieldFilterMap`置空了。
+
+通过`unsafe.defineAnonymousClass`创建匿名内部类，由此匿名类来获取类成员偏移量，最后再通过`unsafe.putObject`修改原来`Reflection`类的静态成员`fieldFilterMap`
 
 Java版本：
 

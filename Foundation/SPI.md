@@ -175,8 +175,8 @@ private static void loadInitialDrivers() {
 
 ```java
 public static <S> ServiceLoader<S> load(Class<S> service) {
-        ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        return ServiceLoader.load(service, cl);
+    ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    return ServiceLoader.load(service, cl);
 }
 ```
 
@@ -217,7 +217,7 @@ private S nextService() {
 
 * 扩展的实现类通过`c = Class.forName(cn, false, loader);`获取
 
-> `Class.forName()`默认使用调用者的ClassLoader，我们是在`DriverManager`类里调用ServiceLoader的，所以调用类也就是`DriverManager`，它的加载器是`Bootstrap ClassLoader`。我们知道`Bootstrap ClassLoader`加载rt.jar包下的所有类，要用`Bootstrap ClassLoader`去加载用户自定义的类是违背双亲委派的，所以使用`Thread.currentThread().getContextClassLoader`去指定`AppClassLoader`
+> `Class.forName()`默认使用调用者的ClassLoader，我们是在`DriverManager`类里调用ServiceLoader的，所以调用类也就是`DriverManager`，它的加载器是`Bootstrap ClassLoader`。我们知道`Bootstrap ClassLoader`加载rt.jar包下的所有类，要用`Bootstrap ClassLoader`去加载用户自定义的类是违背双亲委派的，所以使用`Thread.currentThread().getContextClassLoader`去指定`AppClassLoader`（`ServiceLoader.load`传入的）
 
 查看ClassPath下有那些JDBC Driver
 
@@ -228,7 +228,7 @@ import java.util.ServiceLoader;
 
 public class JdbcDriverList {
     public static void main(String[] args) {
-        ServiceLoader<Driver> serviceLoader = ServiceLoader.load(Driver.class, ClassLoader.getSystemClassLoader( ));
+        ServiceLoader<Driver> serviceLoader = ServiceLoader.load(Driver.class, ClassLoader.getSystemClassLoader());
 
         for (Iterator<Driver> iterator = serviceLoader.iterator(); iterator.hasNext();) {
             Driver driver = iterator.next();
