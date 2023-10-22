@@ -6,7 +6,7 @@ Apache Dubbo是一款阿里巴巴开源的轻量、高性能的Java RPC框架
 * 智能容错、负载均衡
 * 服务自动注册和发现
 
-Dubbo RPC支持多种序列化方式：dubbo、hessian2、kryo、json、java
+Dubbo RPC支持多种序列化方式：dubbo、hessian2、kryo、fastjson、java
 
 ![image-20230406151901889](../.gitbook/assets/image-20230406151901889.png)
 

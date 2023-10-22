@@ -718,4 +718,3 @@ public class Client {
 >
 > * [JNDI-Injection-Bypass](https://github.com/welk1n/JNDI-Injection-Bypass)
 > * [marshalsec](https://github.com/mbechler/marshalsec)
-
