@@ -83,7 +83,7 @@ System.out.println("interfaces: " + Arrays.toString(cr.getInterfaces()));
 >
 > interfaces: [java/io/Serializable, java/lang/Cloneable]
 
-`ClassReader`提供一个`access`方法来让`ClassVisitor`*访问*字节码文件
+`ClassReader`提供一个`accept`方法来让`ClassVisitor`*访问*字节码文件
 
 ```java
 /*
