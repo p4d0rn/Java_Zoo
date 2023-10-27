@@ -48,8 +48,8 @@
   * [FastJson与原生反序列化(二)](https://y4tacker.github.io/2023/04/26/year/2023/4/FastJson与原生反序列化-二/)
   
   * [Jackson的原生反序列化利用](./Deserial/jackson.md)
-* [C3P0](./Deserial/C3P0.md)
 * [SnakeYaml](./Deserial/SnakeYaml.md)
+* [C3P0](./Deserial/C3P0.md)
 * [Log4j](./Deserial/log4j2.md)
 * [AspectJWeaver](./Deserial/AspectJWeaver.md)
 * [Rome](./Deserial/Rome.md)

