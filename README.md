@@ -2,9 +2,9 @@
 
 ⭐I'd appreciate you lighting up the star (if you like this repository🙂)
 
-repository: https://github.com/p4d0rn/Java_Zoo
+repository: <a href="https://github.com/p4d0rn/Java_Zoo">https://github.com/p4d0rn/Java_Zoo</a>
 
-gitbook: https://p4d0rn.gitbook.io/java
+gitbook: <a href="https://p4d0rn.gitbook.io/java">https://p4d0rn.gitbook.io/java</a>
 
 OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 

@@ -156,8 +156,6 @@ Github上面的EXP：https://github.com/artsploit/yaml-payload
 
 `ScriptEngineManager`的无参构造器调用了init()，进行初始化设置后调用`initEngines()`，用于初始化脚本引擎。
 
-![image-20230815140815479](./../.gitbook/assets/image-20230815140815479.png)
-
 接着到`getServiceLoader`，用于获取`ServiceLoader`迭代器
 
 ![image-20230123144053760](../.gitbook/assets/image-20230123144053760.png)

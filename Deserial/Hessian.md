@@ -112,7 +112,7 @@ ois.readObject();
 
 > 下面的分析基于Hessian4.x，默认的序列化器为UnsafeSerializer（使用unsafe在内存层面直接恢复对象）
 >
-> 而Hessian3.x，默认的序列化器为JavaSerializer（调用构造器创建对象和使用反射恢复字段）
+> 而Hessian3.x，默认的序列化器为JavaSerializer（调用构造器创建对象和使用反射恢复字段，优先使用无参构造器）
 
 # 0x02 Hessian At Your Service
 
@@ -485,8 +485,6 @@ protected Object instantiate() throws Exception {
 接着又是熟悉的操作`_unsafe.putObject(obj, _offset, value);`修改对象在内存中字段偏移量处的值
 
 因此就没有触发我们自定义的`readObject`了。
-
-
 
 ## Client
 

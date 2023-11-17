@@ -129,6 +129,7 @@
 * [CISCN 2021 总决赛 ezj4va (AspectJWeaver写字节码文件到classpath)](./CTF/ezj4va.md)
 * [D^3CTF2023 (新的getter+高版本JNDI不出网+Hessian异常toString)](./CTF/d3java.md)
 * [WMCTF2023（CC链花式玩法+盲读文件）](./CTF/WMCTF2023.md)
+* [N1CTF2023（ActiveMQ反序列化+Gson触发无参构造器）](./CTF/N1CTF2023.md)
 
 ## 🔍Code Inspector
 

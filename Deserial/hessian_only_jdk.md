@@ -502,7 +502,7 @@ public class WriteFile {
 }
 ```
 
-# XSLT Transform
+# 0x05 XSLT Transform
 
 通过`com.sun.org.apache.xml.internal.security.utils.JavaUtils#writeBytesToFilename`静态方法写文件，然后通过`com.sun.org.apache.xalan.internal.xslt.Process#_main`去加载XSLT文件触发transform，达到任意字节码加载的目的。不需要出网。
 
@@ -551,7 +551,7 @@ public static Object writeXslt() throws Exception {
 
 试了一下`ClassLoader`在Hessian序列化时会出问题。。。
 
-# 0x05 Reference
+# 0x06 Reference
 
 * [0CTF/TCTF 2022 hessian-onlyJdk - Bmth (bmth666.cn)](http://www.bmth666.cn/bmth_blog/2023/02/07/0CTF-TCTF-2022-hessian-onlyJdk/)
 
