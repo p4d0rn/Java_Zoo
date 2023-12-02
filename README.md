@@ -2,20 +2,26 @@
 
 ⭐I'd appreciate you lighting up the star (if you like this repository🙂)
 
-repository: <a href="https://github.com/p4d0rn/Java_Zoo">https://github.com/p4d0rn/Java_Zoo</a>
+repository: <a href="https://github.com/p4d0rn/Java_Zoo" target="_blank">https://github.com/p4d0rn/Java_Zoo</a></a>
 
-gitbook: <a href="https://p4d0rn.gitbook.io/java">https://p4d0rn.gitbook.io/java</a>
+gitbook: <a href="https://p4d0rn.gitbook.io/java" target="_blank">https://p4d0rn.gitbook.io/java</a></a>
 
 OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 
 ------
 
-## 🍭Prerequisites
+# Table of contents
+
+* [About This Book](README.md)
+
+## 🍖Prerequisites
 
 * [反射](Foundation/reflection.md)
 * [命令执行](./Foundation/exec.md)
 * [高版本JDK反射绕过](./Foundation/reflection2.md)
 * [Unsafe](./Foundation/unsafe.md)
+* [Java Security Manager](./Foundation/securityManager.md)
+* [serialVersionUID](./Foundation/serialVersionUID.md)
 * [代理模式](./Foundation/proxy.md)
 * [双亲委派模型](./Foundation/Parents_Delegate.md)
 * [SPI](./Foundation/SPI.md)
@@ -24,8 +30,8 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 * [URLDNS](Foundation/URLDNS.md)
 * [RPC Intro](Foundation/RPC.md)
 * [RMI](Foundation/RMI.md)
-* [JNDI](Foundation/JNDI.md)
 * [JEP 290](Foundation/jep.md)
+* [JNDI](Foundation/JNDI.md)
 * [JMX](Foundation/JMX.md)
 * [JDWP]()
 * [Tomcat架构](Foundation/tomcat.md)
@@ -34,14 +40,14 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 
 ## 👻Serial Journey
 
-* Commons Collection 🎯
+* Commons Collection 🥏
 
   * [CC1-TransformedMap](./Deserial/CC1_TransformedMap.md)
   * [CC1-LazyMap](./Deserial/CC1_LazyMap.md)
   * [CC6](./Deserial/CC6.md)
   * [CC3](./Deserial/CC3.md)
   * [CC2](./Deserial/CC2.md)
-* FastJson 💨
+* FastJson 🪁
 
   * [FastJson-Basic Usage](./Deserial/FastJsonBasic.md)
 
@@ -58,8 +64,8 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
   * [FastJson与原生反序列化(二)](https://y4tacker.github.io/2023/04/26/year/2023/4/FastJson与原生反序列化-二/)
 
   * [Jackson的原生反序列化利用](./Deserial/jackson.md)
-* [C3P0](./Deserial/C3P0.md)
 * [SnakeYaml](./Deserial/SnakeYaml.md)
+* [C3P0](./Deserial/C3P0.md)
 * [Log4j](./Deserial/log4j2.md)
 * [AspectJWeaver](./Deserial/AspectJWeaver.md)
 * [Rome](./Deserial/Rome.md)
@@ -69,7 +75,7 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 * [Kryo](./Deserial/Kryo.md)
 * [Dubbo](./Deserial/dubbo.md)
 
-## 🪄JDBC Attack
+## ✂️JDBC Attack
 
 * [MySQL JDBC Attack](./JDBC/mysql.md)
 * [H2 JDBC Attack](./JDBC/h2.md)
@@ -107,7 +113,7 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 * [IDEA本地调试Tomcat](./MemShell/de_tomcat.md)
 
 
-## 🔩Shiro
+## 🛡️Shiro
 
 * [Shiro Intro](./Shiro/shiro.md)
 
@@ -128,6 +134,10 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 
 * [El Attack](./Others/elAttack.md)
 
+* Echo Tech
+  * [SpringBoot Under Tomcat](./Echo/sbTomcat.md)
+
+
 ## 🚩CTF
 
 * [长城杯-b4bycoffee (ROME反序列化)](./CTF/b4bycoffee.md)
@@ -137,6 +147,7 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 * [CISCN 2021 总决赛 ezj4va (AspectJWeaver写字节码文件到classpath)](./CTF/ezj4va.md)
 * [D^3CTF2023 (新的getter+高版本JNDI不出网+Hessian异常toString)](./CTF/d3java.md)
 * [WMCTF2023（CC链花式玩法+盲读文件）](./CTF/WMCTF2023.md)
+* [N1CTF2023（ActiveMQ反序列化+Gson触发无参构造器）](./CTF/N1CTF2023.md)
 
 ## 🔍Code Inspector
 

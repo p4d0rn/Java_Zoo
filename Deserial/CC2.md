@@ -126,3 +126,4 @@ public class CC2 {
 4.1中 这几个危险的Transformer类不再实现 Serializable 接口，直接不能序列化和反序列化
 
 因此CC2只能在commons-collections4.0上跑通。
+

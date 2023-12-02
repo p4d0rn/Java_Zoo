@@ -2,12 +2,14 @@
 
 * [About This Book](README.md)
 
-## 🍭Prerequisites
+## 🍖Prerequisites
 
 * [反射](Foundation/reflection.md)
 * [命令执行](./Foundation/exec.md)
 * [高版本JDK反射绕过](./Foundation/reflection2.md)
 * [Unsafe](./Foundation/unsafe.md)
+* [Java Security Manager](./Foundation/securityManager.md)
+* [serialVersionUID](./Foundation/serialVersionUID.md)
 * [代理模式](./Foundation/proxy.md)
 * [双亲委派模型](./Foundation/Parents_Delegate.md)
 * [SPI](./Foundation/SPI.md)
@@ -26,14 +28,14 @@
 
 ## 👻Serial Journey
 
-* Commons Collection 🎯
+* Commons Collection 🥏
 
   * [CC1-TransformedMap](./Deserial/CC1_TransformedMap.md)
   * [CC1-LazyMap](./Deserial/CC1_LazyMap.md)
   * [CC6](./Deserial/CC6.md)
   * [CC3](./Deserial/CC3.md)
   * [CC2](./Deserial/CC2.md)
-* FastJson 💨
+* FastJson 🪁
 
   * [FastJson-Basic Usage](./Deserial/FastJsonBasic.md)
 
@@ -42,13 +44,13 @@
   * [FastJson-JdbcRowSetImpl](./Deserial/FastJson_JdbcRowSetImpl.md)
 
   * [FastJson-BasicDataSource](/Foundation/BCEL.md)
-  
+
   * [FastJson-ByPass](./Deserial/FastJson_ByPass.md)
-  
+
   * [FastJson与原生反序列化(一)](https://paper.seebug.org/2055/)
-  
+
   * [FastJson与原生反序列化(二)](https://y4tacker.github.io/2023/04/26/year/2023/4/FastJson与原生反序列化-二/)
-  
+
   * [Jackson的原生反序列化利用](./Deserial/jackson.md)
 * [SnakeYaml](./Deserial/SnakeYaml.md)
 * [C3P0](./Deserial/C3P0.md)
@@ -61,7 +63,7 @@
 * [Kryo](./Deserial/Kryo.md)
 * [Dubbo](./Deserial/dubbo.md)
 
-## 🪄JDBC Attack
+## ✂️JDBC Attack
 
 * [MySQL JDBC Attack](./JDBC/mysql.md)
 * [H2 JDBC Attack](./JDBC/h2.md)
@@ -99,7 +101,7 @@
 * [IDEA本地调试Tomcat](./MemShell/de_tomcat.md)
 
 
-## 🔩Shiro
+## 🛡️Shiro
 
 * [Shiro Intro](./Shiro/shiro.md)
 
@@ -119,6 +121,10 @@
 * [Apache Commons Jxpath](./Others/jxpath.md)
 
 * [El Attack](./Others/elAttack.md)
+
+* Echo Tech
+  * [SpringBoot Under Tomcat](./Echo/sbTomcat.md)
+
 
 ## 🚩CTF
 

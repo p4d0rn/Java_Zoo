@@ -41,7 +41,7 @@ public Object create() {
 
 * `ReflectionFactory`  + `FactoryTransformer` = `InstantiateTransformer` but Non-Arg Version
 
-Maybe useful ?
+~~Maybe useful ?~~ 这个类不能序列化。。。
 
 ```java
 private static class ReflectionFactory implements Factory {
