@@ -108,6 +108,7 @@ public class SpELController {
 # 0x04 Patch
 
 `SimpleEvaluationContext`、`StandardEvaluationContext` 是 SpEL提供的两个 `EvaluationContext`
+
 `SimpleEvaluationContext` 旨在仅支持 SpEL 语言语法的一个子集。它不包括 Java 类型引用，构造函数和 bean 引用
 
 用`SimpleEvaluationContext`替换默认的`StandardEvaluationContext`，就能有效防止恶意SpEL表达式的执行。

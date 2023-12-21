@@ -1,5 +1,3 @@
-
-
 # EL in JSP
 
 为了简化 JSP 页面，JSP 2.0 新增了 EL（Expression Language）表达式语言 `${EL表达式}`

@@ -2,7 +2,7 @@
 
 JMX (Java Management Extensions) Java管理扩展
 
-JMX经常被成为“Java 版本”的SNMP（Simple Network Management Protocol）。SNMP主要用于监控如交换机或路由器等网络组件。类似地，JMX用于检测Java程序，如应用程序的堆内存使用量、线程数、VM概要等。
+JMX经常被称为“Java 版本”的SNMP（Simple Network Management Protocol）。SNMP主要用于监控如交换机或路由器等网络组件。类似地，JMX用于检测Java程序，如应用程序的堆内存使用量、线程数、VM概要等。
 
 ![image-20230904150434925](./../.gitbook/assets/image-20230904150434925.png)
 
@@ -328,7 +328,7 @@ public class Client {
 >
 > The resource then sets the MBeanInfo and Descriptors for the RequiredModelMBean instance. The attributes and operations exposed via the ModelMBeanInfo for the ModelMBean are accessible from MBeans, connectors/adaptors like other MBeans.Through the Descriptors, values and methods in the managed application can be defined and mapped to attributes and operations of the ModelMBean. This mapping can be defined in an XML formatted file or dynamically and programmatically at runtime. 
 
-相对于StandardMBean，ModelMBean更加灵活，可以修改已有的Java类。`RequiredModelMBean`允许我们通过提供`ModelMBeanInfo`来指定MBean的属性和操作。这意味着我们可以定义不符合MBean的设计模式的方法，即就算其接口类没有该方法，我们也可以调用。
+相对于StandardMBean，ModelMBean更加灵活，可以修改管理的资源为已有的Java类。`RequiredModelMBean`允许我们通过提供`ModelMBeanInfo`来指定MBean的属性和操作。这意味着我们可以定义不符合MBean的设计模式的方法，即就算其接口类没有该方法，我们也可以调用。
 
 #### Invoking Arbitrary Instance Methods
 
@@ -377,7 +377,7 @@ try {
 }
 ```
 
-#### Invoking Arbitrary Instance Methods
+#### Invoking Arbitrary Static Methods
 
 以`JavaUtils`为例
 
