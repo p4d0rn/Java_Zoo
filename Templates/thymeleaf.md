@@ -375,13 +375,15 @@ org.apache.tomcat.util.IntrospectionUtils#callMethodN
 
 ![image-20240218140710781](./../.gitbook/assets/image-20240218140710781.png)
 
-不能是这些类或者其子类
+不能是这些类或者其子类，注意到有一个`RequestContext`类
 
-之前说到`org.springframework.web.servlet.support.RequestContext`可以用来获取`WebApplicationContext`
+之前说到`org.springframework.web.servlet.support.RequestContext`可以用来获取`WebApplicationContext`即Web应用上下文
 
 `org.thymeleaf.spring5.view.ThymeleafView#render => renderFragment`
 
 ![image-20240218143248269](./../.gitbook/assets/image-20240218143248269.png)
+
+`addRequestContextAsVariable`把`requestContext`注册到了Model里，也就是模板里能直接用。
 
 > [[${springMacroRequestContext.webApplicationContext}]]
 >
@@ -392,8 +394,10 @@ org.apache.tomcat.util.IntrospectionUtils#callMethodN
 > `[[]]`是thymeleaf的行内表达式语法
 >
 > `[[]]`会对html进行转义、`[()]`不会
+>
+> 若有些WAF过滤了尖括号，可以使用`[[]]`
 
-我们知道Spring的IOC机制底层是反射+工厂模式，因此获取到应用上下文（ApplicationContext）后，就相当于控制了整个IOC容器。
+我们知道Spring的IOC机制底层是反射+工厂模式，因此获取到应用上下文（WebApplicationContext）后，就相当于控制了整个IOC容器。
 
 `AnnotationConfigServletWebServerApplicationContext`这个应用上下文对象有两个有意思的属性（实际上模板解析时会转换为getter的调用，如`getBeanFactory`）
 
