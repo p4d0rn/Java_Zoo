@@ -20,8 +20,6 @@ Java Naming and Directory Interface：Java命名与目录接口
 
 ![image-20230122124341284](../.gitbook/assets/image-20230122124341284.png)
 
-
-
 SPI 全称为 Service Provider Interface，即服务供应接口，主要作用是**为底层的具体的目录服务提供统一接口**，从而实现目录服务的可插拔式安装。在 JDK 中包含了下述内置的目录服务:
 
 * RMI：Remote Method Invocation 远程方法调用

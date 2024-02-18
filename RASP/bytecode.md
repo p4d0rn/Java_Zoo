@@ -290,7 +290,7 @@ java.util.List<String> cmds = new java.util.ArrayList<String>();
 
 new指令后面都会跟着一个dup指令，再跟着一个invokespecial指令，再用astore存储对象引用到局部变量表
 
-![image-20231009151458201](./img/image-20231009151458201.png)
+![image-20231009151458201](../.gitbook/assets/image-20231009151458201.png)
 
 new：创建一个对象，并将其引用值入栈
 

@@ -12,7 +12,7 @@ fastjson 是阿里巴巴的开源 JSON 解析库，支持将 Java Bean 序列化
 </dependency>
 ```
 
-* POJO => JSON
+### POJO => JSON
 
 > `JSON.toJSONString()`
 >
@@ -96,7 +96,7 @@ public class Test {
 >
 > {"@type":"org.example.Person","age":20,"name":"Lisa"}
 
-* JSON => POJO
+### JSON => POJO
 
 > `JSON.parseObject()`
 >
@@ -119,9 +119,14 @@ public class Test {
 ```
 
 > Non-Arg Constructor
+>
 > setAge
+>
 > setName
+>
 > I am Lisa and 20 years old
+
+### parse vs parseObject
 
 ```java
 import com.alibaba.fastjson.JSON;
@@ -138,14 +143,23 @@ public class Test {
 ```
 
 > Non-Arg Constructor
+>
 > setAge
+>
 > setName
+>
 > I am Lisa and 20 years old
+>
 > Non-Arg Constructor
+>
 > setAge
+>
 > setName
+>
 > getAge
+>
 > getName
+>
 > {"name":"Lisa","age":20}
 
 可以看到`JSON.parseObject()`的打印结果和我们定义的`toString()`不同，说明它不是Person对象。（实际上得到的是JSONObject类对象）
@@ -171,8 +185,9 @@ public class Test {
 
 满足条件的setter：
 
-* 函数名大于4且以set开头
+* 函数名大于等于4
 * 非静态函数
+* 以set开头且第4个字母为大写
 * 返回类型为void或当前类
 * 参数个数为1个
 
