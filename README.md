@@ -106,15 +106,11 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
   * [Listener](./MemShell/listener.md)
   * [Filter](./MemShell/filter.md)
   * [Servlet](./MemShell/servlet.md)
-
 * Tomcat-Middlewares
 
   * [Tomcat-Valve](./MemShell/valve.md)
   * [Tomcat-Executor](./MemShell/executor.md)
   * [Tomcat-Upgrade](./MemShell/upgrade.md)
-* Spring
-  * [Controller](./MemShell/controller.md)
-  * [Interceptor](./MemShell/interceptor.md)
 * [Agent MemShell](./MemShell/agent.md)
 * [WebSocket](./MemShell/websocket.md)
 * [内存马查杀](https://blog.csdn.net/SimoSimoSimo/article/details/127700190)
