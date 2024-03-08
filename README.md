@@ -14,37 +14,46 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 
 ## 🍖Prerequisites
 
-* [反射](Foundation/reflection.md)
-* [命令执行](./Foundation/exec.md)
-* [高版本JDK反射绕过](./Foundation/reflection2.md)
-* [Unsafe](./Foundation/unsafe.md)
-* [Java Security Manager](./Foundation/securityManager.md)
-* [serialVersionUID](./Foundation/serialVersionUID.md)
-* [代理模式](./Foundation/proxy.md)
-* [双亲委派模型](./Foundation/Parents_Delegate.md)
-* [SPI](./Foundation/SPI.md)
-* [动态加载字节码](./Foundation/ClassLoader.md)
-* [BCEL](/Foundation/BCEL.md)
-* [URLDNS](Foundation/URLDNS.md)
-* [RPC Intro](Foundation/RPC.md)
-* [RMI](Foundation/RMI.md)
-* [JEP 290](Foundation/jep.md)
-* [JNDI](Foundation/JNDI.md)
-* [JMX](Foundation/JMX.md)
-* [JDWP](Foundation/JDWP.md)
-* [Tomcat架构](Foundation/tomcat.md)
-* [SpEL表达式](Foundation/SpEL.md)
-* [JNI](./Foundation/JNI.md)
+* 反射
+  * [反射基本使用](Foundation/reflection.md)
+  * [高版本JDK反射绕过](./Foundation/reflection2.md)
+  * [反射调用命令执行](./Foundation/exec.md)
+  * [反射构造HashMap](./Foundation/reflect_hashmap.md)
+* 类加载
+  * [动态加载字节码](./Foundation/ClassLoader.md)
+  * [双亲委派模型](./Foundation/Parents_Delegate.md)
+  * [SPI](./Foundation/SPI.md)
+* RMI & JNDI
+  * [RPC Intro](Foundation/RPC.md)
+  * [RMI](Foundation/RMI.md)
+  * [JEP 290](Foundation/jep.md)
+  * [JNDI](Foundation/JNDI.md)
+* Misc
+  * [Unsafe](./Foundation/unsafe.md)
+  * [代理模式](./Foundation/proxy.md)
+  * [BCEL](./Foundation/BCEL.md)
+  * [JMX](Foundation/JMX.md)
+  * [JDWP](Foundation/JDWP.md)
+  * [JNI](./Foundation/JNI.md)
+  * [serialVersionUID](./Foundation/serialVersionUID.md)
+  * [Java Security Manager](./Foundation/securityManager.md)
 
 ## 👻Serial Journey
+
+* [URLDNS](Foundation/URLDNS.md)
 
 * Commons Collection 🥏
 
   * [CC1-TransformedMap](./Deserial/CC1_TransformedMap.md)
+
   * [CC1-LazyMap](./Deserial/CC1_LazyMap.md)
+
   * [CC6](./Deserial/CC6.md)
+
   * [CC3](./Deserial/CC3.md)
+
   * [CC2](./Deserial/CC2.md)
+
 * FastJson 🪁
 
   * [FastJson-Basic Usage](./Deserial/FastJsonBasic.md)
@@ -92,13 +101,13 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 
 ## 🐎Memory Shell
 
+* [Tomcat-Architecture](Foundation/tomcat.md)
 * Servlet API
+* [Listener](./MemShell/listener.md)
 
-  * [Tomcat-Listener](./MemShell/listener.md)
+* [Filter](./MemShell/filter.md)
 
-  * [Tomcat-Filter](./MemShell/filter.md)
-
-  * [Tomcat-Servlet](./MemShell/servlet.md)
+* [Servlet](./MemShell/servlet.md)
 * Tomcat-Middlewares
 
   * [Tomcat-Valve](./MemShell/valve.md)
@@ -107,9 +116,10 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 * Spring
   * [Controller](./MemShell/controller.md)
   * [Interceptor](./MemShell/interceptor.md)
+
 * [Agent MemShell](./MemShell/agent.md)
 * [WebSocket](./MemShell/websocket.md)
-* [Tomcat JSP](./MemShell/jsp.md)
+* [内存马查杀](https://blog.csdn.net/SimoSimoSimo/article/details/127700190)
 * [IDEA本地调试Tomcat](./MemShell/de_tomcat.md)
 
 
@@ -132,7 +142,11 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 
 * [Apache Commons Jxpath](./Others/jxpath.md)
 
+* [SpEL表达式](Foundation/SpEL.md)
+
 * [El Attack](./Others/elAttack.md)
+
+* [C3P0原生反序列化的JNDI打法](./Others/c3p0.md)
 
 * Echo Tech
   * [SpringBoot Under Tomcat](./Echo/sbTomcat.md)

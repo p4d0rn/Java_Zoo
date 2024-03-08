@@ -1,3 +1,42 @@
+前面介绍了Tomcat下基于`Servelt API`的内存马，在如今Spring一统天下的局面下，有必要研究Spring Boot下内存马的实现。
+
+首先得了解一个请求如何被SpringMVC的`Controller`接收到的。
+
+在整个`Spring MVC`框架中，`DispatcherServlet`处于核心位置，它负责协调和组织不同组件完成请求处理并返回响应工作，所有的请求都通过它。由这个前端控制器将请求分发到不同的`Controller`进行处理。
+
+`DispatcherServlet`既然是个`Servlet`，那我们关注点就在`service`方法
+
+`FrameworkServlet#service`
+
+-> `HttpServlet#service` 
+
+-> `FrameworkServlet#doGet/doPost`
+
+-> `FrameworkServlet#processRequest`
+
+-> `DispatcherServlet#doService`
+
+-> `DispatcherServlet#doDispatch`
+
+这几个都是父亲和儿子之间调来调去，最后下断点在`doDispatch`
+
+```java
+@RestController
+public class MyController {
+    @GetMapping("/hello")
+    public String hello() {
+        return "Hello";
+    }
+}
+```
+
+
+
+
+
+
+
+
 ```java
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;

@@ -323,7 +323,7 @@ node放入`recursiveObjects`，进入`constructor.construct(node)`
 >
 > Contructor#construct()->
 >
-> 迭代Contructor#constructObject()
+> 递归Contructor#constructObject()
 
 上面的POC有5个node，所以循环5次。
 
