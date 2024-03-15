@@ -1,4 +1,4 @@
-# 0x01 What IS JNI
+# 0x01 What Is JNI
 
 JNI：Java Native Interface
 
@@ -78,7 +78,7 @@ javah生成的头文件中的函数命名方式是有非常强制性的约束
 
 上面只是定义了一个native方法，然后通过`System.loadLibrary()`或`System.load()`加载native方法对应的动态链接库，来实现Java层面调用C/C++提供的服务。
 
-还有另外一种方法来实现native方法，在`JNI_OnLoad`函数中进行函数映射，将java里面的方法映射到自己实现的C/C++函数，这样就不用通过`javap`生成头文件了（还有那串又臭又长的函数名）。`JNI_OnLoad`会在加载动态链接库时首先被调用。
+还有另外一种方法来实现native方法，在`JNI_OnLoad`函数中进行函数映射，将java里面的方法映射到自己实现的C/C++函数，这样就不用通过`javah`生成头文件了（还有那串又臭又长的函数名）。`JNI_OnLoad`会在加载动态链接库时首先被调用。
 
 既然这样的话，我们就能将原本java里定义的native方法映射到我们自己实现的方法。
 
@@ -162,6 +162,7 @@ project(NativeRasp)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# 创建分享动态链接库文件
 add_library(NativeRasp SHARED library.cpp)
 
 # 设置jni头文件包含路径
@@ -171,8 +172,6 @@ set(BUILD_USE_64BITS on)
 
 # 包含头文件
 include_directories(${JAVA_INCLUDE_PATH} ${JAVA_AWT_INCLUDE_PATH})
-# 创建分享动态链接库文件
-add_library(MyLib SHARED library.cpp)
 ```
 
 `library.cpp`👇，这里为方便编写，就不管`stdHandles`标准输入输出错误这些了。

@@ -34,7 +34,6 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
   * [BCEL](./Foundation/BCEL.md)
   * [JMX](Foundation/JMX.md)
   * [JDWP](Foundation/JDWP.md)
-  * [JNI](./Foundation/JNI.md)
   * [serialVersionUID](./Foundation/serialVersionUID.md)
   * [Java Security Manager](./Foundation/securityManager.md)
 
@@ -92,6 +91,7 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 * [JavaAgent](./Foundation/JavaAgent.md)
 * [JVM](./RASP/jvm.md)
 * [ByteCode](./RASP/bytecode.md)
+* [JNI](./Foundation/JNI.md)
 * ASM 🪡
   * [ASM Intro](./RASP/asm0.md)
   * [Class Generation](./RASP/asm1.md)

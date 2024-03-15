@@ -1,5 +1,11 @@
 # ASM Intro
 
+## Preface
+
+字节码增强技术是一类对现有字节码进行修改或者动态生成全新字节码文件的技术
+
+![image-20240314131803191](./../.gitbook/assets/image-20240314131803191.png)
+
 ## What Is ASM
 
 ASM是一个操作Java字节码的类库
@@ -48,6 +54,20 @@ ASM主要分成两部分：
 * `Tree API`：`asm-tree.jar`、`asm-analysis.jar`
 
 ![image-20230918093239857](./../.gitbook/assets/image-20230918093239857.png)
+
+`Core API`
+
+* 不需要把这个类的整个结构读取到内存，用流式的方法来处理字节码文件
+* 类比解析XML文件中的SAX方式
+* 优点：节约内存
+* 缺点：编程难度较大
+
+`Tree API`
+
+* 把整个类的结构读取到内存中
+* 类比解析XML文件中的DOM方式
+* 优点：编程简单
+* 缺点：消耗内存
 
 maven依赖：
 

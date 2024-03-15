@@ -1,5 +1,23 @@
 # Class ByteCode
 
+.java文件通过javac编译后将得到一个.class文件
+
+JVM对于字节码是有规范要求
+
+## Magic Number
+
+所有的.class文件的前四个字节都是魔数，固定值为：0xCAFEBABE（咖啡宝贝）
+
+魔数放在文件开头，JVM可以根据文件的开头来判断这个文件是否可能是一个.class文件
+
+## Version Number
+
+版本号为魔数之后的4个字节，前两个字节表示次版本号（Minor Version），后两个字节表示主版本号（Major Version）
+
+转化为十进制后可以在Oracle官网进行查询序号对应的JDK版本，进而得知该字节码文件是由哪个版本的JDK编译的
+
+## Constant Pool
+
 在字节码中，所有变量和方法都是以符号引用的形式保存在class文件的常量池中。字节码被类加载器加载后，class文件中的常量池会被加载到方法区的运行时常量池，动态链接会将运行时常量池中的符号引用转化为调用方法的直接引用。
 
 （IDEA配合`jclasslib Bytecode Viewer`来查看字节码）

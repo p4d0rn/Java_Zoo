@@ -24,7 +24,6 @@
   * [BCEL](./Foundation/BCEL.md)
   * [JMX](Foundation/JMX.md)
   * [JDWP](Foundation/JDWP.md)
-  * [JNI](./Foundation/JNI.md)
   * [serialVersionUID](./Foundation/serialVersionUID.md)
   * [Java Security Manager](./Foundation/securityManager.md)
 
@@ -80,8 +79,10 @@
 ## 🌵RASP
 
 * [JavaAgent](./Foundation/JavaAgent.md)
+* [JPDA](./Foundation/JPDA.md)
 * [JVM](./RASP/jvm.md)
 * [ByteCode](./RASP/bytecode.md)
+* [JNI](./Foundation/JNI.md)
 * ASM 🪡
   * [ASM Intro](./RASP/asm0.md)
   * [Class Generation](./RASP/asm1.md)
@@ -138,6 +139,8 @@
 * [El Attack](./Others/elAttack.md)
 
 * [C3P0原生反序列化的JNDI打法](./Others/c3p0.md)
+
+* [JVMTI实现class加密](./Others/jvmti.md)
 
 * Echo Tech
   * [SpringBoot Under Tomcat](./Echo/sbTomcat.md)
