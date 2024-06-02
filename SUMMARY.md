@@ -9,6 +9,7 @@
   * [高版本JDK反射绕过](./Foundation/reflection2.md)
   * [反射调用命令执行](./Foundation/exec.md)
   * [反射构造HashMap](./Foundation/reflect_hashmap.md)
+  * [方法句柄](./Foundation/MethodHandle.md)
 * 类加载
   * [动态加载字节码](./Foundation/ClassLoader.md)
   * [双亲委派模型](./Foundation/Parents_Delegate.md)
@@ -26,7 +27,6 @@
   * [JDWP](Foundation/JDWP.md)
   * [serialVersionUID](./Foundation/serialVersionUID.md)
   * [Java Security Manager](./Foundation/securityManager.md)
-  * [IDEA远程调试项目](./Foundation/idea_remote.md)
 
 ## 👻Serial Journey
 
@@ -80,7 +80,6 @@
 ## 🌵RASP
 
 * [JavaAgent](./Foundation/JavaAgent.md)
-* [JPDA](./Foundation/JPDA.md)
 * [JVM](./RASP/jvm.md)
 * [ByteCode](./RASP/bytecode.md)
 * [JNI](./Foundation/JNI.md)
@@ -96,20 +95,13 @@
 * [Tomcat-Architecture](Foundation/tomcat.md)
 * Servlet API
   * [Listener](./MemShell/listener.md)
-
   * [Filter](./MemShell/filter.md)
-
   * [Servlet](./MemShell/servlet.md)
-
 * Tomcat-Middlewares
 
   * [Tomcat-Valve](./MemShell/valve.md)
   * [Tomcat-Executor](./MemShell/executor.md)
   * [Tomcat-Upgrade](./MemShell/upgrade.md)
-* Spring
-  * [Controller](./MemShell/controller.md)
-  * [Interceptor](./MemShell/interceptor.md)
-
 * [Agent MemShell](./MemShell/agent.md)
 * [WebSocket](./MemShell/websocket.md)
 * [内存马查杀](https://blog.csdn.net/SimoSimoSimo/article/details/127700190)
@@ -130,19 +122,11 @@
 ## 🍺Others
 
 * [Deserialization Twice](./Others/deserTwice.md)
-
 * [A New Blazer 4 getter RCE](./Others/newGetter.md)
-
 * [Apache Commons Jxpath](./Others/jxpath.md)
-
-* [SpEL表达式](Foundation/SpEL.md)
-
 * [El Attack](./Others/elAttack.md)
-
+* [Spel Attack](./Others/Spel.md)
 * [C3P0原生反序列化的JNDI打法](./Others/c3p0.md)
-
-* [JVMTI实现class加密](./Others/jvmti.md)
-
 * Echo Tech
   * [SpringBoot Under Tomcat](./Echo/sbTomcat.md)
 
@@ -179,5 +163,14 @@
 * ByteCodeDL
 * Tabby 🦀
 * Theory
-  * [Static Analysis](./Theory/Static_Analysis.md)
-
+  * Static Analysis
+    * [Intro](Theory/Intro.md)
+    * [IR & CFG](Theory/IR.md)
+    * [DFA](Theory/DFA.md)
+    * [DFA-Foundation](Theory/DFA-Foundation.md)
+    * [Interprocedural Analysis](Theory/Inter.md)
+    * [Pointer Analysis](Theory/PTA.md)
+    * [Pointer Analysis Foundation](Theory/PTA-Foundation.md)
+    * [PTA-Context Sensitivity](Theory/PTA-CS.md)
+    * [Taint Anlysis](Theory/taint.md)
+    * [Datalog](Theory/datalog.md)
