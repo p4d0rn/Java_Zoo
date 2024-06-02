@@ -158,10 +158,19 @@
 ## 🔍Code Inspector
 
 * CodeQL 🐳
-  * [CodeQL Quick Start](./Utils/CodeQL_Basic.md)
-  * [CodeQL 4 Java](./Utils/CodeQL4Java.md)
+  * Tutorial
+    * [Intro](./Utils/CodeQL/intro.md)
+    * [Module](./Utils/CodeQL/module.md)
+    * [Predicate](./Utils/CodeQL/predicate.md)
+    * [Query](./Utils/CodeQL/query.md)
+    * [Type](./Utils/CodeQL/type.md)
+  * CodeQL 4 Java
+    * [Basics](./Utils/CodeQL/Java/Basics.md)
+    * [DFA](./Utils/CodeQL/Java/DFA.md)
+    * [Example](./Utils/CodeQL/Java/CodeQL4Java.md)
 * ByteCodeDL
 * Tabby 🦀
+  * [install](./Utils/Tabby/install.md)
 * Theory
   * Static Analysis
     * [Intro](Theory/Intro.md)
