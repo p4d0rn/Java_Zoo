@@ -19,6 +19,7 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
   * [高版本JDK反射绕过](./Foundation/reflection2.md)
   * [反射调用命令执行](./Foundation/exec.md)
   * [反射构造HashMap](./Foundation/reflect_hashmap.md)
+  * [方法句柄](./Foundation/MethodHandle.md)
 * 类加载
   * [动态加载字节码](./Foundation/ClassLoader.md)
   * [双亲委派模型](./Foundation/Parents_Delegate.md)
@@ -131,17 +132,11 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 ## 🍺Others
 
 * [Deserialization Twice](./Others/deserTwice.md)
-
 * [A New Blazer 4 getter RCE](./Others/newGetter.md)
-
 * [Apache Commons Jxpath](./Others/jxpath.md)
-
-* [SpEL表达式](Foundation/SpEL.md)
-
 * [El Attack](./Others/elAttack.md)
-
+* [Spel Attack](./Others/Spel.md)
 * [C3P0原生反序列化的JNDI打法](./Others/c3p0.md)
-
 * Echo Tech
   * [SpringBoot Under Tomcat](./Echo/sbTomcat.md)
 
@@ -178,4 +173,14 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 * ByteCodeDL
 * Tabby 🦀
 * Theory
-  * [Static Analysis](./Theory/Static_Analysis.md)
+  * Static Analysis
+    * [Intro](Theory/Intro.md)
+    * [IR & CFG](Theory/IR.md)
+    * [DFA](Theory/DFA.md)
+    * [DFA-Foundation](Theory/DFA-Foundation.md)
+    * [Interprocedural Analysis](Theory/Inter.md)
+    * [Pointer Analysis](Theory/PTA.md)
+    * [Pointer Analysis Foundation](Theory/PTA-Foundation.md)
+    * [PTA-Context Sensitivity](Theory/PTA-CS.md)
+    * [Taint Anlysis](Theory/taint.md)
+    * [Datalog](Theory/datalog.md)

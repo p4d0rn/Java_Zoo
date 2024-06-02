@@ -26,6 +26,7 @@
   * [JDWP](Foundation/JDWP.md)
   * [serialVersionUID](./Foundation/serialVersionUID.md)
   * [Java Security Manager](./Foundation/securityManager.md)
+  * [IDEA远程调试项目](./Foundation/idea_remote.md)
 
 ## 👻Serial Journey
 

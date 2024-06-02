@@ -77,9 +77,9 @@ EL表达式不仅可以以文本元素的形式出现，也可以出现在Jsp标
 
 ​		-> `org.apache.el.parser.AstValue#getValue`
 
-​			判断当前是方法调用，则获取下一个`AstMethodParameters`节点作为方法调用参数。每轮解析后都会更新base，作为下一轮方法调			用或成员获取的对象。
+​			判断当前是方法调用，则获取下一个`AstMethodParameters`节点作为方法调用参数。每轮解析后都会更新base，作为下一轮方法调用或成员获取的对象。
 
-​			![image-20230831131153107](./../.gitbook/assets/image-20230831131153107.png)
+![image-20230831131153107](./../.gitbook/assets/image-20230831131153107.png)
 
 ​			-> `org.apache.jasper.el.JasperELResolver#invoke`
 
@@ -95,7 +95,7 @@ EL表达式不仅可以以文本元素的形式出现，也可以出现在Jsp标
 
 ​				这边最后通过`BeanELResolver`进行解析，通过反射调用方法
 
-​				![image-20230831132829348](./../.gitbook/assets/image-20230831132829348.png)
+![image-20230831132829348](./../.gitbook/assets/image-20230831132829348.png)
 
 由于是链式的反射调用，每次更新的base都有明确的类型，因此不需要强制转换类型
 

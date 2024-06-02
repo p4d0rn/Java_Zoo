@@ -1,4 +1,4 @@
-# 0x02 Intermediate Representation
+# 0x02 IR & CFG
 
 ## Compiler and Static Analyzer
 
