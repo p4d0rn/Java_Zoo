@@ -516,7 +516,7 @@ public class ProcessImplHook {
 
 # Native Bypass
 
-可以看到上面hook本地方法本质上就是给native方法换了个名，再套上原来壳，如果我们知道native方法的前缀，理论上应该是能绕过的。
+可以看到上面hook本地方法本质上就是给native方法换了个名，再套上原来的壳，如果我们知道native方法的前缀，理论上应该是能绕过的。
 
 ## JNI
 

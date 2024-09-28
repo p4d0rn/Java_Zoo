@@ -27,6 +27,7 @@
   * [JDWP](Foundation/JDWP.md)
   * [JPDA](./Foundation/JPDA.md)
   * [JVMTI](./Others/jvmti.md)
+  * [JNA](./Foundation/JNA.md)
   * [serialVersionUID](./Foundation/serialVersionUID.md)
   * [Java Security Manager](./Foundation/securityManager.md)
 

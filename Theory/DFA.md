@@ -15,7 +15,7 @@ How application-specific data flows through the nodes and edges of CFG（source 
 
 different data-flow analysis applications have
 
-different data abstraction and
+different data abstraction and 
 
 different flow safe-approximation strategies and
 
@@ -44,7 +44,7 @@ different transfer functions and control-flow handlings
 DFA is to find a solution to a set of safe-approximation-directed constraints on the IN[s]’s and OUT[s]’s for all statements
 
 * constraints based on semantics of statements（transfer function）
-* constraints based on the flows of control1
+* constraints based on the flows of control
 
 ### Transfer Function
 
@@ -88,6 +88,8 @@ The definitions of all the variables in a program can be represented by bit vect
 > genB：definitions generated in this BB.
 >
 > killB: new definition D in this BB kills other definitions
+>
+> The definitions in genB can reach the program point at OUT[B] and those in killB can't reach the program point at OUT[B]
 >
 > obviously, same variables in definition bit vectors can not exist at the same time.
 

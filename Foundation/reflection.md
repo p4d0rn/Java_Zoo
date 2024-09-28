@@ -46,13 +46,13 @@ public class Person {
 * `Person.class`：类已加载，直捣`class`属性
 
 ```java
-        Person person = new Person();
-        Class clazzA = Class.forName("com.demo.Person");
-        Class clazzB = person.getClass();
-        Class clazzC = Person.class;
-        System.out.println(clazzA.hashCode());
-        System.out.println(clazzB.hashCode());
-        System.out.println(clazzC.hashCode());
+Person person = new Person();
+Class clazzA = Class.forName("com.demo.Person");
+Class clazzB = person.getClass();
+Class clazzC = Person.class;
+System.out.println(clazzA.hashCode());
+System.out.println(clazzB.hashCode());
+System.out.println(clazzC.hashCode());
 ```
 
 三者`hashCode`无异，同一Class对象也
@@ -62,34 +62,34 @@ public class Person {
 既获之类，进而获之属性与方法，实例之。
 
 ```java
-        Class clazz = Class.forName("com.demo.Person");
+Class clazz = Class.forName("com.demo.Person");
 
-        // 获取所有方法
-        Method[] methods = clazz.getDeclaredMethods();
-        for (Method method : methods) {
-            System.out.println(method);
-        }
+// 获取所有方法
+Method[] methods = clazz.getDeclaredMethods();
+for (Method method : methods) {
+    System.out.println(method);
+}
 
-        // 获取所有字段
-        Field[] fields = clazz.getDeclaredFields();
-        for (Field field : fields) {
-            System.out.println(field);
-        }
+// 获取所有字段
+Field[] fields = clazz.getDeclaredFields();
+for (Field field : fields) {
+    System.out.println(field);
+}
 
-        // 实例化类
-        Constructor constructor = clazz.getConstructor(String.class, Integer.class);
-        Person person = (Person) constructor.newInstance("Billy", 15);
+// 实例化类
+Constructor constructor = clazz.getConstructor(String.class, Integer.class);
+Person person = (Person) constructor.newInstance("Billy", 15);
 
-        // 修改私有字段
-        Field field = clazz.getDeclaredField("age");
-        field.setAccessible(true);
-        field.set(person, 18);
-        System.out.println(person);
+// 修改私有字段
+Field field = clazz.getDeclaredField("age");
+field.setAccessible(true);
+field.set(person, 18);
+System.out.println(person);
 
-        // 调用私有方法
-        Method method = clazz.getDeclaredMethod("action", String.class);
-        method.setAccessible(true);
-        method.invoke(person,"PRIVATE METHOD GET");
+// 调用私有方法
+Method method = clazz.getDeclaredMethod("action", String.class);
+method.setAccessible(true);
+method.invoke(person,"PRIVATE METHOD GET");
 ```
 
 * `getMethod`获当前类的public方法（包括从父类继承的方法）
@@ -105,7 +105,7 @@ public class Person {
 >
 > - `method.invoke(Object obj, Object... args)`
 >   若method是一个普通方法，则第一个参数是类对象
->   若method是一个静态方法，则第一个参数是类
+>   若method是一个静态方法，则第一个参数是类或null
 >   第二个参数也是可变长参数，传入method所需的参数
 
 ## 修改常量
@@ -218,6 +218,8 @@ clazz.getMethod("exec", String.class).invoke(constructor.newInstance(), "calc");
   Class clazz = Class.forName("java.lang.ProcessBuilder");
   clazz.getMethod("start").invoke(clazz.getConstructor(String[].class).newInstance(new String[][]{{"calc"}}));
   ```
+
+由于`newInstance`接受的是一个可变长的Object类型参数，可以传入无限个参数或者只传一个数组，因此第二个构造中，传入的是`new String[][]{{"calc"}}`，如果传的是`new String[]{"calc"}`，经过`newInstance`的这层解析后，传入`start`的就是字符串`calc`。可以理解为前者传的是`new Object[]{new String[]{"calc"}}`
 
 # 0x04 Summary
 

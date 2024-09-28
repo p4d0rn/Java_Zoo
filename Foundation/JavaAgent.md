@@ -8,7 +8,7 @@ RASP是一种植入到应用程序内部或其运行时环境的安全技术。R
 
 JavaAgent是其背后的技术支持
 
-在Java SE 5及后续版本中，开发者可以构建一个独立于应用程序的代理程序（Agent，就是个java类），用来监测和协助运行在JVM上的程序，还能够修改字节码，动态修改已加载或未加载的类以及它们的属性和方法。
+在Java SE 5及后续版本中，开发者可以构建一个独立于应用程序的代理程序（Agent），用来监测和协助运行在JVM上的程序，还能够修改字节码，动态修改已加载或未加载的类以及它们的属性和方法。
 
 # 0x01 Basic Concept
 
@@ -37,7 +37,7 @@ public interface Instrumentation {
 
     boolean isRetransformClassesSupported();
 
-    //在类加载之后，重新定义Class。该方法是1.6之后加入的，事实上，该方法是 update 了一个类。可以修改方法体，但是不能变更方法签名、增加和删除方法/类的成员属性
+    // 在类加载之后，重新定义Class。该方法是1.6之后加入的，事实上，该方法是 update 了一个类。可以修改方法体，但是不能变更方法签名、增加和删除方法/类的成员属性
     void retransformClasses(Class<?>... classes) throws UnmodifiableClassException;
     
     // 获取目标已经加载的类。
@@ -53,7 +53,7 @@ public interface Instrumentation {
 
   * 实现premain方法
 
-  * mainfest清单中包含`Premain-Class`字段
+  * manifest清单中包含`Premain-Class`字段
 
 * 加载Agent
 

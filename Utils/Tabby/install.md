@@ -52,11 +52,11 @@ Neo4j v5 版本 apoc 插件改成了两个部分 `apoc-core` 和 `apoc-extend`�
 
 Neo4j Desktop新建一个Local DBMS，设置插件
 
-![image-20240503180412998](./../.gitbook/assets/image-20240503180412998.png)
+![image-20240503180412998](./../../.gitbook/assets/image-20240503180412998.png)
 
 将上面准备的几个jar包移入plugins目录
 
-![image-20240503180550491](./../.gitbook/assets/image-20240503180550491.png)
+![image-20240503180550491](./../../.gitbook/assets/image-20240503180550491.png)
 
 接着修改数据库配置 Edit settings
 
@@ -74,7 +74,7 @@ dbms.memory.pagecache.size=1G
 
 Neo4j v5 拆分了 apoc 的配置信息，需要在配置文件目录下另外设置apoc的配置
 
-![image-20240503180835676](./../.gitbook/assets/image-20240503180835676.png)
+![image-20240503180835676](./../../.gitbook/assets/image-20240503180835676.png)
 
 新建`apoc.conf`文件
 

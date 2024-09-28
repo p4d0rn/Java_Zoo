@@ -60,7 +60,7 @@ public class Hello {
 }
 ```
 
-`Hello.java`编译为字节码文件后，`python -m http.server 8080`开启服务
+`Hello.java`编译为字节码文件后，`python -m http.server 8080`开启web服务监听
 
 若能控制目标ClassLoader的路径，就能够利用远程加载执行任意代码。
 

@@ -45,7 +45,7 @@ debugger和debuggee在启动的时候, 都需要通过设置JVM参数来让它�
 
 JVMTI(JVM Tool Interface)是JVM提供的一套对JVM进行操作的工具接口
 
-> JVM TI is intended to provide a VM interface for the full breadth of tools that need access to VM state, including but not limited to: profiling, debugging, monitoring, thread analysis, and coverage analysis tools.    
+> JVM TI is intended to provide a VM interface for the full breadth of tools that need access to VM state, including but not limited to: profiling, debugging, monitoring, thread analysis, and coverage analysis tools.
 
 通过JVMTI，可以实现对JVM的多种操作，它通过接口注册各种事件钩子，在JVM事件触发时，同时触发预定义的钩子，以实现对各种JVM事件的响应。
 

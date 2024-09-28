@@ -8,6 +8,10 @@ NOTEs Are Taken From Online Shared Course *Static Program Analysis* conducted by
 
 # 0x01 Intro
 
+![image-20240925234445818](./../.gitbook/assets/image-20240925234445818.png)
+
+In the last decade, the language cores had few changes, but the programs became significantly larger and more complicated. To ensure the reliability, security, and other promises of large-scale and complex programs become a challenge.
+
 Programming Languages（PL）can not live without Program analysis
 
 Why Need Static Analysis：

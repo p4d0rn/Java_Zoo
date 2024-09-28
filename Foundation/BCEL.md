@@ -2,16 +2,10 @@
 
 BCEL(Byte Code Engineering Library)的全名是Apache Commons BCEL，属于Apache Commons项目下的一个子项目，BCEL库提供了一系列用于分析、创建、修改Java Class文件的API。相较Commons Collections，BCEL被包含在原生JDK中，更容易被利用。
 
-> BCEL Classloader在 JDK < 8u251之前是在rt.jar里面。
->
-> 在Tomcat中也会存在相关的依赖
->
-> tomcat7：org.apache.tomcat.dbcp.dbcp.BasicDataSource
->
-> tomcat8+：org.apache.tomcat.dbcp.dbcp2.BasicDataSource
+> BCEL Classloader在 JDK < 8u251之前是在rt.jar里面，后被移除
 >
 
-`com.sun.org.apache.bcel.internal.util.ClassLoader`重写了Java内置的`ClassLoader#loadClass()`方法，会判断类名是否是`$$BCEL$$`开头，如果是的话，将会对这个字符串进行decode。可以理解为是传统字节码的HEX编码，再将反斜线替换成`$`。默认情况下外层还会加一层GZip压缩。
+`com.sun.org.apache.bcel.internal.util.ClassLoader`重写了Java内置的`ClassLoader#loadClass()`方法，会判断传入的字符串是否是`$$BCEL$$`开头，如果是的话，将会对这个字符串进行decode。可以理解为是传统字节码的HEX编码，再将反斜线替换成`$`。默认情况下外层还会加一层GZip压缩。
 
 # 0x02 Best Practice
 
@@ -46,9 +40,13 @@ public class Test {
 }
 ```
 
-* `Repository`用于将一个`Java Class`先转换成原生字节码（也可以用javac命令）
+* `Repository`用于将一个`Java Class`先转换成原生字节码
 
 * `Utility`用于将原生的字节码转换成BCEL格式的字节码
+
+我们知道一般的类加载器`loadClass`是传入的全限定类名，它会调用`findClass`根据其设定的搜索URL去找这个字节码文件，读取后再调用`defineClass`加载进来。
+
+而对于这个类加载器，我们是直接将编码后的字节码传入`loadClass`，从利用上来说就不需要远程加载或者文件落地了。
 
 # 0x03 BCEL + fastjson
 
@@ -60,7 +58,7 @@ fastjson网传的三条利用链如下：
 
 1. 常规的Java字节码的执行，但是需要开启`Feature.SupportNonPublicField`，较鸡肋
 2. 利用JNDI注入，但需要服务器出网
-3. 不用出网也不用开启`Feature.SupportNonPublicField`
+3. 不用出网也不用开启`Feature.SupportNonPublicField`，但对JDK版本有限制
 
 ```xml
 <dependency>

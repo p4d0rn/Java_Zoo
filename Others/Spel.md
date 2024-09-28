@@ -171,6 +171,24 @@ System.out.println(cmd);
 
 `java.lang.ClassLoader#defineClass`不是公开方法，无法被其他模块访问
 
+当然Spring也提供了相应的解决方案，就是利用方法句柄的API来定义类
+
+```java
+// Preferred option: JDK 9+ Lookup.defineClass API if ClassLoader matches
+if (contextClass != null && contextClass.getClassLoader() == loader &&
+    privateLookupInMethod != null && lookupDefineClassMethod != null) {
+    try {
+        MethodHandles.Lookup lookup = (MethodHandles.Lookup)
+            privateLookupInMethod.invoke(null, contextClass, MethodHandles.lookup());
+        c = (Class) lookupDefineClassMethod.invoke(lookup, b);
+    } // ...
+}
+```
+
+但`MethodHandles$Lookup#defineClass`（JDK8中没有这个方法）要求定义的类需要和`Lookup`对象的目标类的`package`一致才行。这里的目标类就是传入`ReflectionUtils#defineClass`的上下文类`contextClass`。
+
+随便选了`org.springframework.expression`下的一个类`ExpressionParser`
+
 ```java
 byte[] bytes = ClassPool.getDefault().get("org.springframework.expression.EvilInterceptor").toBytecode();
 String s = Base64.getEncoder().encodeToString(bytes);

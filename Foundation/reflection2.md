@@ -50,7 +50,7 @@ System.out.println(secret.get(null));  // G0T_Y0U
 
 这里实际上已经通过`getDeclaredFields0`获取到了所有字段了
 
-`getDeclaredFields0`是`java.lang.Class`下的成员，恰好上面的`fieldFilterMap`只过滤了`java.lang.Class`下的`classLoader`成员，因此我们直接反射调用`getDeclaredFields0`就能获取到`Fields`的所有成员
+`getDeclaredFields0`是`java.lang.Class`下的方法，`Reflection`中的`methodFilterMap`并未过滤此方法，因此我们直接反射调用`getDeclaredFields0`就能获取到`Fields`的所有成员
 
 ```java
 Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
@@ -70,6 +70,8 @@ modifierField.setInt(secret, secret.getModifiers() & ~Modifier.FINAL);
 secret.set(null, "G0T_Y0U");
 System.out.println(secret.get(null));
 ```
+
+上面的绕过在JDK17以下可以成功，JDK17对`java*` 下的非公共字段进行反射调用获取的话就会直接报错，且看下文分析
 
 # 反射加载字节码
 
@@ -96,11 +98,15 @@ JDK版本更迭史：
   * 部分非标准库的类被移除
 * JDK11
   * `Unsafe.defineClass`方法被移除
-  * 默认禁止跨包之间反射调用非公共方法
+  * 默认禁止跨包之间反射调用非公共方法（非强制，只是警告）
 * JDK12
   * `Reflection`类下的`fieldFilterMap`增加过滤。反射被大大限制
 * JDK15
   * JS引擎被移除JDK
+* JDK17
+  * 强封装
+  * 不得反射调用未开放模块的非公共方法（强制）
+
 
 ## JDK11
 
@@ -139,7 +145,7 @@ public void jsTest() throws Exception {
 >
 > at java.base/java.lang.reflect.AccessibleObject.checkCanSetAccessible
 
-但直接运行下面代码却可以（可能是JDK相信主类?ClassLoader对其开放）
+但直接运行下面代码却可以
 
 ```java
 public static void main(String[] args) throws Exception {
@@ -213,7 +219,7 @@ public static String getJsPayload3(String code) throws Exception {
 }
 ```
 
-### override Bypass
+### override field Bypass
 
 回看`setAccessible`的调用逻辑
 
@@ -285,7 +291,7 @@ https://github.com/BeichenDream/Kcon2021Code/blob/master/bypassJdk/JdkSecurityBy
 
 直接把`fieldFilterMap`置空了。
 
-通过`unsafe.defineAnonymousClass`创建匿名内部类，由此匿名类来获取类成员偏移量，最后再通过`unsafe.putObject`修改原来`Reflection`类的静态成员`fieldFilterMap`
+通过`unsafe.defineAnonymousClass`创建匿名内部类，由此匿名类来获取类成员偏移量（为什么要创建匿名类是因为`fieldFilterMap`过滤了`Reflection`的所有成员，无法直接使用`getDeclaredField`获取Field），最后再通过`unsafe.putObject`修改原来`Reflection`类的静态成员`fieldFilterMap`，此外还要删除`reflectionData`反射缓存。
 
 Java版本：
 
@@ -355,6 +361,136 @@ public static String getJsPayload5(String code) throws Exception {
         "unsafe.defineAnonymousClass(java.lang.Class.forName(\"java.lang.Class\"), bytes, null).newInstance();";
 }
 ```
+
+## JDK17
+
+JDK17中，在`checkCanSetAccessible`最后一关判断模块是否开放不能通过，导致抛出异常`Unable to make xxx accessible: module xxx does not opens xxx to xxx` 
+
+```java
+// package is open to caller
+if (declaringModule.isOpen(pn, callerModule)) {
+    return true;
+}
+```
+
+`declaringModule`即目标`AccessibleObject`所在类`declaringClass`所在的模块
+
+比如`java.lang.Class`所在`java.base`
+
+`pn`是`declaringClass`的包名
+
+跟进`Module#isOpen`
+
+```java
+/*
+* Returns true if this module exports or opens the given package 
+* to the given module. If the other module is EVERYONE_MODULE then
+* this method tests if the package is exported or opened
+* unconditionally.
+*/
+private boolean implIsExportedOrOpen(String pn, Module other, boolean open) {
+    // all packages in unnamed modules are open
+    if (!isNamed())
+        return true;
+
+    // all packages are exported/open to self
+    if (other == this && descriptor.packages().contains(pn))
+        return true;
+
+    // all packages in open and automatic modules are open
+    if (descriptor.isOpen() || descriptor.isAutomatic())
+        return descriptor.packages().contains(pn);
+
+    // exported/opened via module declaration/descriptor
+    if (isStaticallyExportedOrOpen(pn, other, open))
+        return true;
+
+    // exported via addExports/addOpens
+    if (isReflectivelyExportedOrOpen(pn, other, open))
+        return true;
+
+    // not exported or open to other
+    return false;
+}
+```
+
+如何判断目标模块是否开放或导出？
+
+* `unnamed modules`对外开放
+* 调用者所在模块就是目标模块，并且`pn`是目标模块下的包
+* 目标模块设置设置对外开放或者它是`automatic`模块
+* 目标模块是否导出`pn`包（`isStaticallyExportedOrOpen`）
+* 目标模块是否反射可导出`pn`包（`isReflectivelyExportedOrOpen`）
+
+（ JDK<17，这里`isStaticallyExportedOrOpen`返回true，模块默认开放所有包）
+
+实际上这里有些条件在`checkCanSetAccessible`开始已经判定过了
+
+```java
+private boolean checkCanSetAccessible(Class<?> caller,
+                                      Class<?> declaringClass,
+                                      boolean throwExceptionIfDenied) {
+    Module callerModule = caller.getModule();
+    Module declaringModule = declaringClass.getModule();
+
+    if (callerModule == declaringModule) return true;
+    if (callerModule == Object.class.getModule()) return true;
+    if (!declaringModule.isNamed()) return true;
+}
+```
+
+* `callerModule`和`declaringModule`一致
+* `callerModule`和`Object`所在模块一致
+* `declaringModule`是`unnamed modules`
+
+因此我们通过`Unsafe`修改当前调用者的模块为`Object`所在模块
+
+（用`Unsafe`修改，刚好`fieldFilterMap`没有过滤`Class`的`module`成员）
+
+还是以最开始的修改`final`字段为例
+
+```java
+// 设置当前调用者的模块为Object所在模块java.base
+Class UnsafeClass = Class.forName("sun.misc.Unsafe");
+Field unsafeField = UnsafeClass.getDeclaredField("theUnsafe");
+unsafeField.setAccessible(true);
+Unsafe unsafe = (Unsafe) unsafeField.get(null);
+Module objModule = Object.class.getModule();
+long addr = unsafe.objectFieldOffset(Class.class.getDeclaredField("module"));
+unsafe.getAndSetObject(FinalBypass.class, addr, objModule);
+
+Method getDeclaredFields0 = Class.forName("java.lang.Class").getDeclaredMethod("getDeclaredFields0", boolean.class);
+getDeclaredFields0.setAccessible(true);
+Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+Field modifierField = null;
+for (Field field : fields) {
+    if (field.getName().equals("modifiers")) {
+        modifierField = field;
+        break;
+    }
+}
+if (modifierField == null)
+    throw new NoSuchFieldException("modifiers");
+modifierField.setAccessible(true);
+Field secret = FinalTest.class.getDeclaredField("secret");
+secret.setAccessible(true);
+modifierField.setInt(secret, secret.getModifiers() & ~Modifier.FINAL);
+secret.set(null, "G0T_Y0U");
+System.out.println(secret.get(null));  // G0T_Y0U
+```
+
+# SumUp
+
+总的来说，高版本JDK对于反射的限制有两点：
+
+* JDK >= 12，`fieldFilterMap`新增黑名单类，反射获取字段受限
+* JDK >= 9，反射调用方法/获取非公开字段，`checkCanSetAccessible`判断模块是否对外开放，非public类或非public方法/字段无法调用/获取
+
+相应的绕过：
+
+* JDK <= 11，对于公开类下的非公开成员的访问，修改其访问修饰符为public，或者修改`AccessibleObject`的`override`属性为true
+* 12 <= JDK < 17，`Unsafe`实例化一个`Reflection`，获取`fieldFilterMap`偏移量，再置为空
+* JDK = 17，修改当前调用类的module为`Object`的module
 
 # Reference
 
