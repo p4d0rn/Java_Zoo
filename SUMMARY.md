@@ -182,6 +182,7 @@
   * [Intro](./Utils/SootUp/intro.md)
   * [Jimple](./Utils/SootUp/jimple.md)
   * [DFA](./Utils/SootUp/dfa.md)
+  * [CG](./Utils/SootUp/cg.md)
 * Tabby  🔦
   * [install](./Utils/Tabby/install.md)
 * Theory
