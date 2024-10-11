@@ -8,13 +8,8 @@ Let’s view it in another way
 
 * Given a CFG with k nodes, the iterative algorithm updates OUT[n] for every node n in each iteration.
 * Assume the domain of the values in data flow analysis is V, let’s define a k-tuple: (OUT[n1], OUT[n2], …, OUT[nk]) as an element of set (V1 × V2 … × Vk) denoted as Vk, to hold the values of the analysis after each iteration.
-* Each iteration can be considered as taking an action to map
-  an element of Vk to a new element of Vk, through applying
-  the transfer functions and control-flow handing, abstracted
-  as a function F: Vk → Vk
-* Then the algorithm outputs a series of k-tuples iteratively
-  until a k-tuple is the same as the last one in two consecutive
-  iterations.
+* Each iteration can be considered as taking an action to map an element of Vk to a new element of Vk, through applying the transfer functions and control-flow handing, abstracted as a function F: Vk → Vk
+* Then the algorithm outputs a series of k-tuples iteratively until a k-tuple is the same as the last one in two consecutive iterations.
 
 ![image-20240405094013650](./../.gitbook/assets/image-20240405094013650.png)
 
@@ -43,6 +38,8 @@ Some examples of poset:
 ![image-20240405094807219](./../.gitbook/assets/image-20240405094807219.png)
 
 ![image-20240405094956644](./../.gitbook/assets/image-20240405094956644.png)
+
+Obviously, as long as there is an upper bound or a lower bound, the corresponding lub and glb also exist.
 
 # Lattice
 
@@ -87,6 +84,8 @@ A complete lattice is not necessarily a finite lattice!
 
 ![image-20240405101304929](./../.gitbook/assets/image-20240405101304929.png)
 
+The IN and OUT of every node can be seen as a latice.（data flow value）
+
 ![image-20240405103624941](./../.gitbook/assets/image-20240405103624941.png)
 
 ![image-20240405103653446](./../.gitbook/assets/image-20240405103653446.png)
@@ -111,7 +110,7 @@ Proof：
 
 ![image-20240405111741958](./../.gitbook/assets/image-20240405111741958.png)
 
-## Relate to Iterative Algorithm
+# Relate to Iterative Algorithm
 
 ![image-20240405120423891](./../.gitbook/assets/image-20240405120423891.png)
 
@@ -125,9 +124,7 @@ If a product lattice Lk is a product of complete(and finite) lattices, i.e., (L,
 In each iteration, it is equivalent to think that we apply function F which consists of
 
 * transfer function fi: L → L for every node
-* join/meet function ⊔/⊓: L×L×L... → L 
-
-for control-flow confluence
+* join/meet function ⊔/⊓: L×L×L... → L for control-flow influence
 
 How to prove function F is monotonic?
 
@@ -149,15 +146,27 @@ To sum up, we can draw these conclusions:
 
 ## May & Must analysis
 
+What is the meaning of top and bottom?
+
+Take *Reaching  Definition* for example：
+
+Suppose there is a scenario where the program checks the *undefine error*. We set a dummy definition for each variable, which means that the variable is undefined. Obviously, they should be set to a value of 0 at first, indicating that all undefined variable will not reach this program point. This is an unsafe result because there may be some undefined variables. This is bottom.
+
+For the top, the values are all 1 which means that all definitions may reach. This is a safe but useless result.
+
+We need the fixed point to stay at the safe area and close to the Truth as long as possible. That is, we need the optimal solution.（least/greatest fixed point）
+
 ![image-20240405125725741](./../.gitbook/assets/image-20240405125725741.png)
 
-## MOP
+# MOP
 
 How precise is our solution?
 
 MOP: Meet Over All Paths
 
 ![image-20240405143022516](./../.gitbook/assets/image-20240405143022516.png)
+
+MOP is only a conceptual  metric, as it is not practical to enumerate all paths (there may be path explosions).
 
 ![image-20240405143044398](./../.gitbook/assets/image-20240405143044398.png)
 

@@ -261,7 +261,7 @@ public class test {
 
 # Close RASP
 
-> 一旦攻击者拿到了一个代码执行权限，那么他便可以通过反射的方式取得RASP运行在内存中的开关变量（多为boolean或者AtomicBoolean类型），并把它由true修改为false，就可以使RASP得的防护完全失效。**注意，开关变量只是其中一个最具代表性的思路，我们当然有更多的方法去破坏RASP的运行模式，如置空检测逻辑代码（如果RASP使用了js、lua等别的引擎），置空黑名单、添加白名单**
+> 一旦攻击者拿到了一个代码执行权限，那么他便可以通过反射的方式取得RASP运行在内存中的开关变量（多为boolean或者AtomicBoolean类型），并把它由true修改为false，就可以使RASP得的防护完全失效。**开关变量只是其中一个思路，当然有更多的方法去破坏RASP的运行模式，如置空检测逻辑代码（如果RASP使用了js、lua等别的引擎），置空黑名单、添加白名单**
 
 ```java
 Class clazz = Class.forName("com.baidu.openrasp.HookHandler");
@@ -286,7 +286,6 @@ unsafe.putObject(clazz, unsafe.staticFieldOffset(field), new AtomicBoolean(false
   * 更加隐蔽的内存马
   * `defineAnonymousClass`生成的类无法通过反射获取其内部信息，且类加载器为`Bootstrap ClassLoader`，会被认为jdk自带的类
 
-  
 
 # Reference
 

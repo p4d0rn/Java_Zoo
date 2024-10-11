@@ -16,17 +16,15 @@ perform constant-propagation analysis, i = NAC which is false positive.
 
 In dynamic execution, a method may be called multiple times under different calling contexts.
 
-Under different calling contexts, the variables of the method may point to different objects.
+Under different calling contexts, the variables（parameters and return variables） of the method may point to different objects.
 
 In Context-Insensitive pointer analysis, objects under different contexts are mixed and propagated to other parts of program(through return values or side-effects), causing spurious data flows.
 
-Context sensitivity models calling contexts by distinguishing different data flows of different contexts to improve precision.
+> The object pointing information of the parameters passed in each time the method is called is mixed together, resulting in a spurious value in the return value of the method, and some side effects of the method (such as modifying the fields of the object) also produce some spurious values.
 
-## Clone
+Context sensitivity models calling contexts by distinguishing different data flows of different contexts to improve precision.  
 
-The oldest and best-known context sensitivity strategy is **call-site sensitivity** (call-string)
-
-![image-20240411140429351](./../.gitbook/assets/image-20240411140429351.png)
+## Cloning-Based CS
 
 The most straightforward approach to implement context sensitivity is by cloning context.
 
@@ -35,6 +33,8 @@ In cloning-based context-sensitive pointer analysis, each method is qualified by
 The variables are also qualified by contexts (inherited from the method they are declared in)
 
 Essentially each method and its variables are cloned, one clone per context.
+
+![image-20241006132826058](./../.gitbook/assets/image-20241006132826058.png)
 
 ![image-20240411140824827](./../.gitbook/assets/image-20240411140824827.png)
 
@@ -57,6 +57,10 @@ The abstract objects are also qualified by contexts(called heap contexts, inheri
 
 ![image-20240411142222149](./../.gitbook/assets/image-20240411142222149.png)
 
+![image-20241006135019700](./../.gitbook/assets/image-20241006135019700.png)
+
+We need both a variable context and a heap context to be effective.
+
 ## Rule
 
 ![image-20240411154642695](./../.gitbook/assets/image-20240411154642695.png)
@@ -73,7 +77,7 @@ The abstract objects are also qualified by contexts(called heap contexts, inheri
 
 # Algorithm
 
-pretty same as C.I. analysis
+pretty same as C.I. analysis 
 
 ![image-20240411164037690](./../.gitbook/assets/image-20240411164037690.png)
 
@@ -97,9 +101,13 @@ Different `Select` refers to different analysis variants.
 
 ## Call-site sensitivity
 
+The oldest and best-known context sensitivity strategy is **call-site sensitivity** (call-string) 
+
+![image-20240411140429351](./../../.gitbook/assets/image-20240411140429351.png)
+
 Each context consists of a list of call sites(call chain)
 
-At a method call, append the call site to the caller context as callee context.(essentially the abstraction of call stack)
+At a method call, append the call site to the caller context as callee context.(essentially the **abstraction of call stack** in dynamic  execution)
 
 ![image-20240411165258926](./../.gitbook/assets/image-20240411165258926.png)
 
@@ -147,6 +155,10 @@ Example:
 
 ![image-20240411174919252](./../.gitbook/assets/image-20240411174919252.png)
 
+From above, we can see that
+
+For 1 limitation, when the same method of the same receiver object is called multiple times , the object sensitivity may not be precise; when there is multiple layers of nested calls, the call-site sensitivity may not be precise.
+
 Call-Site vs. Object Sensitivity
 
 * In theory, their precision is incomparable
@@ -170,26 +182,4 @@ In general:
 
 * Precision: object > type > call-site
 * Efficiency: type > object > call-site
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

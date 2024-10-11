@@ -14,7 +14,7 @@ we make the most conservative assumption for method calls（safe-approximation�
 * y = NAC
 * n = NAC
 
-which leads to impression.
+which leads to imprecision.
 
 For better precision, introducing interprocedural analysis（propagate data-flow information along interprocedural control-flow edges）. First we need **call graph** to perform interprocedural analysis.
 
@@ -49,7 +49,7 @@ Before proceeding, we need to learn some basic knowledge about method calls in J
 
 static call and special call can be determined at compile-time, but virtual call can be only determined at run-time. The former is trivial and the latter is non-trivial(key to call graph construction for OOPLs)
 
-During run-time, a virtual call is resolved based on
+During run-time, a virtual call is dynamically resolved based on（method dispatch）
 
 1. type of the receiver object(caller)
 2. method signature at the call site
@@ -84,6 +84,68 @@ Class Hierarchy Analysis
 > 
 >Resolve target methods by looking up the class hierarchy of class `A`
 
+Taking the class inheritance relationship above as an example, let's take a look at the bytecode of the method call.
+
+```java
+public class C extends B{
+    @Override
+    public void foo() {
+        super.foo();
+        this.secret();
+    }
+    private void secret(){
+    }
+    public C() {
+    }
+}
+```
+
+corresponding jvm bytecode👇
+
+```java
+ALOAD 0
+INVOKESPECIAL B.foo ()V
+ALOAD 0
+INVOKESPECIAL C.secret ()V
+RETURN
+
+<init>
+aload_0
+invokespecial <B.<init> : ()V>
+return
+```
+
+`super.foo()` calls the `foo` method of the superclass of class C. But we know that class B does not have a `foo` method. So `invokespecial` also needs to dispatch.
+
+For calls to private methods and constructors, the corresponding class can be found directly in the method signature.
+
+In addition, the constructor first calls the parent class's no-argument
+
+In fact, static methods can also be inherited, so `invokestatic` also requires dispatch.
+
+So what we need to focus on are calls to methods that can be overridden.
+
+```java
+A a = new C();
+a.foo();
+```
+
+corresponding jvm bytecode👇
+
+```java
+new <C>
+dup
+invokespecial <C.<init> : ()V>
+astore_1
+aload_1
+invokevirtual <A.foo : ()V>
+return
+```
+
+You can see that the class pointed to in the method signature followed by `invokevirtual` is the declared type of the receiver object.
+
+Given the polymorphic nature of Java, the actual method invoked might be the `foo` method superseded by a subclass of class A. So we shall find the foo method of class A and its subclasses.
+
 We define function Resolve(cs) to resolve possible target methods of a call site cs by CHA
 
 ![image-20240406230815555](./../.gitbook/assets/image-20240406230815555.png)
@@ -117,6 +179,10 @@ Features of CHA：
 * disadvantage: imprecise
   * Easily introduce spurious target methods
 * common usage: IDE
+
+`Navigate -> Call Hierarchy`
+
+![image-20241003141258635](./../.gitbook/assets/image-20241003141258635.png)
 
 Call Graph Construction —— Algorithm
 
@@ -224,12 +290,3 @@ Interprocedural Constant Propagation In Summary
   * Call-to-return edges: kill the value of LHS variable of the call site, propagate values of other local variables
   * Call edges: pass argument values
   * Return edges: pass return values
-
-
-
-
-
-
-
-
-

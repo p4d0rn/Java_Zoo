@@ -1,6 +1,4 @@
-
-
-## Getting Started
+# Getting Started
 
 在利用`SootUp`分析程序之前，需要了解它的一些核心数据结构：
 
@@ -12,7 +10,7 @@
 * `Body`：Soot中方法体的表示
 * `StmtGraph`：方法体的控制流图
 
-### Create a View
+## Create a View
 
 首先得创建一个`AnalysisInputLocation`指定分析对象所在位置，再将其传入创建一个`JavaView`
 
@@ -45,7 +43,7 @@ JavaView view = new JavaView(Collections.singletonList(inputLocation),
                 new LRUCacheProvider(50));
 ```
 
-### Retrieving a Class
+## Retrieving a Class
 
 每个类都由一个独特的签名来标识，也就是类的全限定名（`fully-qualified class name`, aka `fqcn`），在`SootUp`中是通过`ClassType`来表示一个类的签名的
 
@@ -75,7 +73,7 @@ if(!clazzOpt.isPresent()){
 JavaSootClass clazz = clazzOpt.get();
 ```
 
-### Retrieving a Method
+## Retrieving a Method
 
 类似地，方法也有签名，在`SootUp`中通过`MethodSignature`来表示
 
@@ -139,7 +137,7 @@ JavaSootMethod method = clazzMethod.get();
 
 `SubSignature`为`void main(java.lang.String[])`，实际上就是去掉了签名的类名部分
 
-### Retrieving the CFG
+## Retrieving the CFG
 
 每个`SootMethod`都包含一个控制流图CFG，由`StmtGraph`表示，这个结构是后面进行程序分析的基础。
 

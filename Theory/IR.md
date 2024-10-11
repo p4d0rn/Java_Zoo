@@ -25,7 +25,7 @@ How does Compiler work?
 
   Code Generator生成机器码
 
-## AST vs IR
+### why IR
 
 why IR is better for static analysis than AST？
 
@@ -45,6 +45,21 @@ IR：
 * compact and uniform
 * contains control flow information
 * usually considered as the basis for static analysis
+
+Other candidates：
+
+Java source code：
+
+* statements and classes can be nested
+
+Java bytecode
+
+* advantages
+  * no nesting; one statement follows the other; looping/branches through jumps
+  * nested classes are "flattened" into normal classes
+* disadvantages
+  * no local variables: operations performed on operand stack
+  * too many bytecodes（more than 200，many of them are overloaded based on their type）
 
 ## 3-Address Code
 
