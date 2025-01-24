@@ -45,10 +45,6 @@ $ jar -cf0M PatchSuccess.jar ./*
 
 war包的依赖包放在WEB-INF/lib下，字节码文件放在WEB-INF/classes下
 
-
-
-
-
 ## 反序列化防御
 
 原生反序列化，自定义`ObjectInputStream`

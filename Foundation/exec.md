@@ -7,7 +7,7 @@
 最简单的命令执行方法
 
 ```java
-Runtime.getRuntime().exec("calc");
+Runtime.getRuntime().exec("bash -c {echo,d2hvYW1p}|{base64,-d}|{bash,-i}");
 ```
 
 跟踪调用栈可以发现，`Runtime#exec`并不是命令执行的最终点
